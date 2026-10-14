@@ -1,0 +1,29 @@
+{
+  "name": "tripplanner-ai",
+  "version": "1.0.0",
+  "description": "TripPlanner — AI-Powered Smart Trip Planner. College Mini Project for ABESIT Ghaziabad (2026-27)",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install && cd server && npm install && cd ../client && npm install",
+    "start": "concurrently \"npm run server\" \"npm run client\"",
+    "server": "cd server && npm run dev",
+    "client": "cd client && npm run dev",
+    "build": "cd client && npm run build",
+    "test": "cd server && npm test"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "ai",
+    "trip-planner",
+    "react",
+    "express",
+    "mysql",
+    "gemini",
+    "clerk",
+    "mapbox"
+  ],
+  "author": "ABESIT Student Team - 2026-27",
+  "license": "ISC"
+}

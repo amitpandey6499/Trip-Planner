@@ -1,0 +1,572 @@
+{
+  "users": [
+    {
+      "id": "user_demo_123",
+      "email": "demo@tripplanner.com",
+      "name": "Aarav Sharma",
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+    }
+  ],
+  "trips": [
+    {
+      "id": "trip_demo_manali_4d",
+      "userId": "user_demo_123",
+      "destination": "Manali",
+      "title": "Manali Trip",
+      "startDate": "2026-11-12",
+      "endDate": "2026-11-15",
+      "durationDays": 4,
+      "travelersCount": 2,
+      "totalBudget": 15000,
+      "budgetCategory": "Moderate",
+      "status": "Upcoming",
+      "destinationImage": "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80",
+      "createdAt": "2026-10-11T15:41:31.464Z"
+    }
+  ],
+  "itineraries": {
+    "trip_demo_manali_4d": {
+      "destination": "Manali",
+      "title": "4-Day Himalayan Escape to Manali",
+      "durationDays": 4,
+      "travelersCount": 2,
+      "budgetCategory": "Moderate",
+      "totalBudget": 15000,
+      "currency": "INR",
+      "destinationImage": "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1200&q=80",
+      "summary": "Experience the majestic charm of Manali with a balanced itinerary covering sacred cedar temples, high-octane snow adventure at Solang Valley and Atal Tunnel, bohemian Old Manali culture, and riverside nature walks.",
+      "days": [
+        {
+          "dayNumber": 1,
+          "title": "Arrival & Local Sightseeing",
+          "dateOffset": 0,
+          "description": "Reach Manali and check-in to hotel. Explore ancient temples and the bustling Mall Road.",
+          "estimatedDailyExpense": 3500,
+          "activities": [
+            {
+              "id": "act-m1-1",
+              "placeName": "Arrival at Manali",
+              "timeSlot": "09:00 AM",
+              "category": "Transit",
+              "estimatedDuration": "1.5 hours",
+              "description": "Reach Manali and check-in to hotel. Freshen up and unpack with mountain view tea.",
+              "imageUrl": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2396,
+                "lng": 77.1887
+              },
+              "cost": 500,
+              "tips": "Request a room with balcony facing snow peaks."
+            },
+            {
+              "id": "act-m1-2",
+              "placeName": "Hadimba Devi Temple",
+              "timeSlot": "11:00 AM - 12:00 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1 hour",
+              "description": "Famous wooden temple surrounded by giant deodar trees, built in 1553 CE.",
+              "imageUrl": "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2483,
+                "lng": 77.1814
+              },
+              "cost": 50,
+              "tips": "Angora rabbit pictures and local apple juice stalls are located outside."
+            },
+            {
+              "id": "act-m1-3",
+              "placeName": "Mall Road & Tibetan Monastery",
+              "timeSlot": "01:00 PM - 03:00 PM",
+              "category": "Attraction",
+              "estimatedDuration": "2 hours",
+              "description": "Explore local shops, cafes and culture. Shop for woolens, shawls, and wooden handicrafts.",
+              "imageUrl": "https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2426,
+                "lng": 77.1895
+              },
+              "cost": 800,
+              "tips": "Try warm Himachali Siddu with ghee and spicy mint chutney."
+            },
+            {
+              "id": "act-m1-4",
+              "placeName": "Van Vihar Park",
+              "timeSlot": "04:00 PM - 06:00 PM",
+              "category": "Attraction",
+              "estimatedDuration": "2 hours",
+              "description": "Beautiful park with river view and walking trails surrounded by deodar forest.",
+              "imageUrl": "https://images.unsplash.com/photo-1473448912268-2022ce9509d8?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.238,
+                "lng": 77.191
+              },
+              "cost": 100,
+              "tips": "Great sunset spot by the boulder banks of river Beas."
+            }
+          ]
+        },
+        {
+          "dayNumber": 2,
+          "title": "Solang Valley & Atal Tunnel Adventure",
+          "dateOffset": 1,
+          "description": "Thrilling day in the high Himalayas with snow sports, cable car ride, and engineering marvel Atal Tunnel.",
+          "estimatedDailyExpense": 4800,
+          "activities": [
+            {
+              "id": "act-m2-1",
+              "placeName": "Hotel Departure",
+              "timeSlot": "09:00 AM",
+              "category": "Transit",
+              "estimatedDuration": "1 hour",
+              "description": "Early departure to avoid peak tourist traffic at Solang barrier.",
+              "imageUrl": "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2432,
+                "lng": 77.1892
+              },
+              "cost": 600,
+              "tips": "Dress in thermal layers and carry polarized sunglasses."
+            },
+            {
+              "id": "act-m2-2",
+              "placeName": "Solang Valley",
+              "timeSlot": "10:00 AM",
+              "category": "Attraction",
+              "estimatedDuration": "2 hours",
+              "description": "Vibrant alpine valley offering paragliding, zorbing, and quad-biking.",
+              "imageUrl": "https://images.unsplash.com/photo-1548013146-72479768bada?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.3167,
+                "lng": 77.1578
+              },
+              "cost": 1200,
+              "tips": "Always ask for licensed pilot certificates before booking paragliding."
+            },
+            {
+              "id": "act-m2-3",
+              "placeName": "Adventure Activities & Ropeway",
+              "timeSlot": "12:00 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1.5 hours",
+              "description": "Scenic cable car climb up to Mt. Phatru at 3,200 meters altitude.",
+              "imageUrl": "https://images.unsplash.com/photo-1516738901171-8eb4fc13bd20?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.318,
+                "lng": 77.155
+              },
+              "cost": 1500,
+              "tips": "Breathtaking panorama of Friendship Peak and Hanuman Tibba."
+            },
+            {
+              "id": "act-m2-4",
+              "placeName": "Lunch at Mountain Cafe",
+              "timeSlot": "02:00 PM",
+              "category": "Restaurant",
+              "estimatedDuration": "1 hour",
+              "description": "Hot comfort meal featuring steaming Maggi, parathas, and spiced mountain tea.",
+              "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.315,
+                "lng": 77.16
+              },
+              "cost": 400,
+              "tips": "Rest and hydrate before driving higher into the tunnel."
+            },
+            {
+              "id": "act-m2-5",
+              "placeName": "Atal Tunnel",
+              "timeSlot": "04:00 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1 hour",
+              "description": "World's longest highway tunnel above 10,000 feet, cut through the Pir Panjal range.",
+              "imageUrl": "https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.3639,
+                "lng": 77.1353
+              },
+              "cost": 200,
+              "tips": "Observe the sudden change in climate as you exit the north portal into Lahaul."
+            },
+            {
+              "id": "act-m2-6",
+              "placeName": "Sissu Waterfall",
+              "timeSlot": "05:30 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1 hour",
+              "description": "Spectacular cascade tumbling down barren cliff faces into the Chandra river.",
+              "imageUrl": "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.4772,
+                "lng": 77.1235
+              },
+              "cost": 100,
+              "tips": "Watch for willow tree groves and suspension footbridges."
+            },
+            {
+              "id": "act-m2-7",
+              "placeName": "Return to Hotel",
+              "timeSlot": "07:00 PM",
+              "category": "Transit",
+              "estimatedDuration": "1.5 hours",
+              "description": "Drive back to Manali under starlit Himalayan sky.",
+              "imageUrl": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2432,
+                "lng": 77.1892
+              },
+              "cost": 500,
+              "tips": "Enjoy a cozy bonfire dinner at the hotel garden."
+            }
+          ]
+        },
+        {
+          "dayNumber": 3,
+          "title": "Old Manali & Vashisht Village",
+          "dateOffset": 2,
+          "description": "Immerse in cobblestone alleys, wood-carved temples, hot sulfur springs, and music cafes.",
+          "estimatedDailyExpense": 3200,
+          "activities": [
+            {
+              "id": "act-m3-1",
+              "placeName": "Manu Temple",
+              "timeSlot": "10:00 AM",
+              "category": "Attraction",
+              "estimatedDuration": "1.5 hours",
+              "description": "Historic shrine dedicated to Sage Manu, according to legend the progenitor of humanity.",
+              "imageUrl": "https://images.unsplash.com/photo-1544735716-392fe2489ffa?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2541,
+                "lng": 77.1785
+              },
+              "cost": 50,
+              "tips": "Steep uphill walk from Old Manali bridge, wear comfortable shoes."
+            },
+            {
+              "id": "act-m3-2",
+              "placeName": "Cafe Crawl in Old Manali",
+              "timeSlot": "12:30 PM",
+              "category": "Restaurant",
+              "estimatedDuration": "2 hours",
+              "description": "Experience Israeli shakshuka, fresh apple crumbles, and acoustic music vibes.",
+              "imageUrl": "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.253,
+                "lng": 77.179
+              },
+              "cost": 850,
+              "tips": "Drifter's Cafe or Cafe 1947 by the river are top picks."
+            },
+            {
+              "id": "act-m3-3",
+              "placeName": "Vashisht Hot Water Springs & Temple",
+              "timeSlot": "03:30 PM",
+              "category": "Attraction",
+              "estimatedDuration": "2 hours",
+              "description": "Natural geothermal sulfur baths renowned for medicinal healing properties across the river.",
+              "imageUrl": "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2612,
+                "lng": 77.1983
+              },
+              "cost": 50,
+              "tips": "Separate public and private bath chambers available."
+            },
+            {
+              "id": "act-m3-4",
+              "placeName": "Jogini Waterfall Hike",
+              "timeSlot": "05:00 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1.5 hours",
+              "description": "Gentle 30-minute scenic trek through apple orchards leading to cascading waterfalls.",
+              "imageUrl": "https://images.unsplash.com/photo-1432405972618-c60b0225b8f9?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2705,
+                "lng": 77.199
+              },
+              "cost": 0,
+              "tips": "Carry a refillable water bottle and snack bar."
+            }
+          ]
+        },
+        {
+          "dayNumber": 4,
+          "title": "Naggar Castle Heritage & Departure",
+          "dateOffset": 3,
+          "description": "Visit medieval timber castle with panoramic Beas valley views and pick up memorable souvenirs before departure.",
+          "estimatedDailyExpense": 2500,
+          "activities": [
+            {
+              "id": "act-m4-1",
+              "placeName": "Naggar Castle",
+              "timeSlot": "10:00 AM",
+              "category": "Attraction",
+              "estimatedDuration": "2 hours",
+              "description": "500-year-old wooden castle of Kullu kings with art gallery and royal wooden courtyards.",
+              "imageUrl": "https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.1384,
+                "lng": 77.1706
+              },
+              "cost": 150,
+              "tips": "Featured in several Bollywood blockbusters like 'Jab We Met'."
+            },
+            {
+              "id": "act-m4-2",
+              "placeName": "Nicholas Roerich Art Gallery",
+              "timeSlot": "12:30 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1 hour",
+              "description": "Historic estate and gallery of famous Russian mystic painter capturing Himalayan grandeur.",
+              "imageUrl": "https://images.unsplash.com/photo-1518998053901-5348d3961a04?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.1402,
+                "lng": 77.173
+              },
+              "cost": 100,
+              "tips": "Surrounded by cedar pine garden."
+            },
+            {
+              "id": "act-m4-3",
+              "placeName": "Kullu Shawl Weaving Centers",
+              "timeSlot": "02:30 PM",
+              "category": "Attraction",
+              "estimatedDuration": "1.5 hours",
+              "description": "Watch artisans hand-weave authentic Kullu geometric patterned wool shawls and buy genuine woolens.",
+              "imageUrl": "https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.002,
+                "lng": 77.135
+              },
+              "cost": 600,
+              "tips": "Look for the genuine Woolmark label certification."
+            },
+            {
+              "id": "act-m4-4",
+              "placeName": "Departure Transfer",
+              "timeSlot": "05:00 PM",
+              "category": "Transit",
+              "estimatedDuration": "1 hour",
+              "description": "Transfer to Bhuntar Airport / Volvo Bus Stand for onward journey home.",
+              "imageUrl": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+              "coordinates": {
+                "lat": 32.2396,
+                "lng": 77.1887
+              },
+              "cost": 500,
+              "tips": "Confirm boarding point and carry snacks for the night journey."
+            }
+          ]
+        }
+      ],
+      "hotels": [
+        {
+          "id": "h_manali_1",
+          "name": "The Orchard Greens",
+          "rating": 4.5,
+          "pricePerNight": 3500,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80",
+          "amenities": [
+            "Free WiFi",
+            "Mountain View",
+            "Breakfast",
+            "Heated Rooms"
+          ],
+          "budgetTier": "Moderate",
+          "address": "Log Huts Area, Manali, HP",
+          "distance": "1.2 km from Mall Road",
+          "coordinates": {
+            "lat": 32.2432,
+            "lng": 77.1892
+          }
+        },
+        {
+          "id": "h_manali_2",
+          "name": "Snow Valley Resort",
+          "rating": 4.6,
+          "pricePerNight": 4200,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1582719508461-905c673771fd?auto=format&fit=crop&w=600&q=80",
+          "amenities": [
+            "Free WiFi",
+            "Mountain View",
+            "Buffet Breakfast",
+            "Spa"
+          ],
+          "budgetTier": "Luxury",
+          "address": "Log Huts, Manali, HP",
+          "distance": "1.8 km from Mall Road",
+          "coordinates": {
+            "lat": 32.2471,
+            "lng": 77.1856
+          }
+        },
+        {
+          "id": "h_manali_3",
+          "name": "Hotel Himalayan",
+          "rating": 4.4,
+          "pricePerNight": 2800,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?auto=format&fit=crop&w=600&q=80",
+          "amenities": [
+            "Budget Friendly",
+            "Clean Rooms",
+            "WiFi",
+            "Balcony"
+          ],
+          "budgetTier": "Budget",
+          "address": "Hadimba Road, Manali, HP",
+          "distance": "800 m from Hadimba Temple",
+          "coordinates": {
+            "lat": 32.241,
+            "lng": 77.184
+          }
+        },
+        {
+          "id": "h_manali_4",
+          "name": "The Manali Inn",
+          "rating": 4.5,
+          "pricePerNight": 3800,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=600&q=80",
+          "amenities": [
+            "River View",
+            "Breakfast",
+            "Parking",
+            "Gym"
+          ],
+          "budgetTier": "Moderate",
+          "address": "Rangree, Manali, HP",
+          "distance": "2.5 km from Mall Road",
+          "coordinates": {
+            "lat": 32.2285,
+            "lng": 77.188
+          }
+        }
+      ],
+      "restaurants": [
+        {
+          "id": "r_manali_1",
+          "name": "Johnson's Café",
+          "rating": 4.6,
+          "cuisine": "Cafe • Continental",
+          "costForTwo": 800,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?auto=format&fit=crop&w=600&q=80",
+          "dietaryTags": [
+            "Wood-fired Pizza",
+            "Trout",
+            "Cocktails"
+          ],
+          "address": "Circuit House Road, Manali",
+          "distance": "600 m from Mall Road",
+          "coordinates": {
+            "lat": 32.244,
+            "lng": 77.1865
+          }
+        },
+        {
+          "id": "r_manali_2",
+          "name": "IL Forno",
+          "rating": 4.5,
+          "cuisine": "Italian • Pizza • Pasta",
+          "costForTwo": 600,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+          "dietaryTags": [
+            "Wood Fired",
+            "Garden Seating",
+            "Veg Friendly"
+          ],
+          "address": "Hadimba Road, Manali",
+          "distance": "400 m from Hadimba Temple",
+          "coordinates": {
+            "lat": 32.246,
+            "lng": 77.183
+          }
+        },
+        {
+          "id": "r_manali_3",
+          "name": "Casa Bella Vista",
+          "rating": 4.4,
+          "cuisine": "Cafe • European",
+          "costForTwo": 500,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1552566626-52f8b828add9?auto=format&fit=crop&w=600&q=80",
+          "dietaryTags": [
+            "Organic Salad",
+            "Vegan Options",
+            "Desserts"
+          ],
+          "address": "Log Huts Road, Old Manali",
+          "distance": "1.1 km from Mall Road",
+          "coordinates": {
+            "lat": 32.2482,
+            "lng": 77.1812
+          }
+        },
+        {
+          "id": "r_manali_4",
+          "name": "Drifter's Cafe",
+          "rating": 4.6,
+          "cuisine": "Cafe • Indian • Continental",
+          "costForTwo": 450,
+          "currency": "INR",
+          "imageUrl": "https://images.unsplash.com/photo-1550966871-3ed3cdb5ed0c?auto=format&fit=crop&w=600&q=80",
+          "dietaryTags": [
+            "Live Music",
+            "Board Games",
+            "Budget Friendly"
+          ],
+          "address": "Manu Temple Road, Old Manali",
+          "distance": "1.5 km from Mall Road",
+          "coordinates": {
+            "lat": 32.253,
+            "lng": 77.179
+          }
+        }
+      ],
+      "budgetBreakdown": {
+        "accommodation": 6800,
+        "activitiesAndSightseeing": 3600,
+        "foodAndDining": 2800,
+        "localTransport": 1800,
+        "totalEstimated": 15000,
+        "currency": "INR"
+      },
+      "mapRouteInfo": {
+        "day2": {
+          "title": "Day 2 - Solang Valley",
+          "totalDistanceKm": 98,
+          "estimatedTravelHours": 3.5,
+          "waypoints": [
+            {
+              "name": "Hotel",
+              "lat": 32.2432,
+              "lng": 77.1892,
+              "type": "hotel"
+            },
+            {
+              "name": "Solang Valley",
+              "lat": 32.3167,
+              "lng": 77.1578,
+              "type": "attraction"
+            },
+            {
+              "name": "Atal Tunnel",
+              "lat": 32.3639,
+              "lng": 77.1353,
+              "type": "attraction"
+            },
+            {
+              "name": "Sissu",
+              "lat": 32.4772,
+              "lng": 77.1235,
+              "type": "attraction"
+            }
+          ]
+        }
+      }
+    }
+  }
+}
