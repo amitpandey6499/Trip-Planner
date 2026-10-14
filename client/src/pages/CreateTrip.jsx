@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users, IndianRupee, Sparkles, ArrowRight, ArrowLeft, Check, Loader2, Minus, Plus, AlertCircle } from 'lucide-react';
 import {
   BUDGET_TIERS,
@@ -23,6 +23,8 @@ import {
 } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
 import { interestIcon } from '../constants/ui';
+import { PageLoader, TripNotFound } from '../components/PageState';
+import { useTripFromUrl } from '../hooks/useTripFromUrl';
 
 const STEPS = [
   { num: 1, label: 'Destination' },
@@ -62,10 +64,21 @@ const initialForm = (prefs) => {
   };
 };
 
+/**
+ * /trips/new       → new trip
+ * /trips/:id/edit  → load that saved trip first, then edit it (Regenerate keeps the same trip)
+ */
 export const CreateTrip = () => {
+  const { id } = useParams();
+  const { error } = useTrip();
+  const status = useTripFromUrl(id);
+  if (status === 'loading') return <PageLoader title="Loading your trip..." />;
+  if (status === 'missing') return <TripNotFound message={error} />;
+  return <TripWizard key={id ?? 'new'} editTripId={id ?? null} />;
+};
+
+const TripWizard = ({ editTripId }) => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const editTripId = location.state?.editTripId ?? null;
   const { currentPreferences, generateTrip, loading, error, clearError } = useTrip();
 
   const [step, setStep] = useState(1);
@@ -120,7 +133,8 @@ export const CreateTrip = () => {
     }
     try {
       await generateTrip(result.data, { tripId: editTripId });
-      navigate('/itinerary');
+      // Editing → back to that trip's page (with "unsaved changes"); new → the draft page.
+      navigate(editTripId ? `/trips/${editTripId}` : '/itinerary');
     } catch {
       // The server message is shown above the form (TripContext → error).
     }

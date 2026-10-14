@@ -51,7 +51,7 @@ export const Footer = () => {
                 </Link>
               </li>
               <li>
-                <Link to="/create-trip" className="text-slate-400 hover:text-white transition-colors">
+                <Link to="/trips/new" className="text-slate-400 hover:text-white transition-colors">
                   Create Trip Wizard
                 </Link>
               </li>

@@ -55,6 +55,9 @@ const envSchema = z
     // AI
     GEMINI_API_KEY: secret,
     GEMINI_MODEL: z.string().trim().min(1).default('gemini-3.8-flash'),
+    AI_DAILY_LIMIT: z.coerce.number().int().min(1).max(1000).default(20),
+    AI_TIMEOUT_SECONDS: z.coerce.number().int().min(5).max(180).default(45),
+    AI_CACHE_DAYS: z.coerce.number().int().min(0).max(90).default(7),
 
     // Places (optional)
     GOOGLE_PLACES_API_KEY: secret,
@@ -108,7 +111,13 @@ export const config = Object.freeze({
     cookieSecure: env.COOKIE_SECURE === 'auto' ? isProd : env.COOKIE_SECURE === 'true',
     demoLoginEnabled: env.DEMO_LOGIN_ENABLED,
   }),
-  gemini: Object.freeze({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }),
+  gemini: Object.freeze({
+    apiKey: env.GEMINI_API_KEY,
+    model: env.GEMINI_MODEL,
+    dailyLimit: env.AI_DAILY_LIMIT,
+    timeoutMs: env.AI_TIMEOUT_SECONDS * 1000,
+    cacheDays: env.AI_CACHE_DAYS,
+  }),
   googlePlacesKey: env.GOOGLE_PLACES_API_KEY,
   rateLimit: Object.freeze({
     windowMs: env.RATE_LIMIT_WINDOW_MIN * 60 * 1000,
@@ -121,6 +130,7 @@ export const config = Object.freeze({
 /** Which optional integrations are configured (shown on /api/health and the Profile page). */
 export const serviceStatus = () => ({
   geminiAI: Boolean(config.gemini.apiKey),
+  aiDailyLimit: config.gemini.dailyLimit,
   googlePlaces: Boolean(config.googlePlacesKey),
   demoLogin: config.auth.demoLoginEnabled,
 });

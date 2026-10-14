@@ -20,7 +20,7 @@ server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 | Database | MongoDB Atlas + Mongoose |
 | Login | JWT in an httpOnly cookie, bcrypt password hashing |
 | Validation | Zod 4 schemas in `shared/`, used by both client and server |
-| AI | Google Gemini (offline sample generator when no API key is set) |
+| AI | Google Gemini via `@google/genai` (JSON schema output, cache, daily limit) + offline planner for 8 destinations |
 | Tooling | npm workspaces, ESLint, Node test runner + Supertest + mongodb-memory-server |
 
 ## Project structure
@@ -33,7 +33,8 @@ tripplanner/
 ├── shared/               # code used by BOTH client and server: schemas, constants, date/budget utils
 ├── server/               # Express API
 │   ├── src/config/env.js # all settings, loaded from server/.env and validated
-│   ├── src/models/       # Mongoose: User, Trip, ContactMessage
+│   ├── src/models/       # Mongoose: User, Trip, ContactMessage, AiCache, AiUsage
+│   ├── src/services/ai/  # Gemini client, prompt, cache/limit, offline planner
 │   ├── src/middleware/   # JWT auth, validation, error handler, rate limits
 │   ├── src/controllers/  ├── src/routes/  ├── src/services/
 │   ├── scripts/          # seed (demo account), test database helper
@@ -62,8 +63,31 @@ npm run dev
 ```
 
 Open **http://localhost:5173**, sign up, or click **"Try the demo account"** on the login page (a demo account with a sample
-Manali trip is created automatically). Without a Gemini key the app still works using the offline sample generator, and the
-top banner and Profile page say so.
+Manali trip is created automatically). Without a Gemini key the app still works: the **offline planner** builds real day plans
+from curated places for Manali, Goa, Jaipur, Udaipur, Varanasi, Kerala, Andaman and Rishikesh, and the top banner and Profile
+page say so. Other destinations need the Gemini key.
+
+### AI (Google Gemini)
+
+1. Get a free key at **https://aistudio.google.com/apikey** and put it in `server/.env` as `GEMINI_API_KEY`.
+2. Restart `npm run dev`. The terminal shows `[AI] Gemini model: ...`, and Profile shows "Configured".
+3. Optional settings (see `server/.env.example`): `GEMINI_MODEL`, `AI_DAILY_LIMIT` (per user per day, default 20),
+   `AI_TIMEOUT_SECONDS` (45), `AI_CACHE_DAYS` (7).
+
+How one request is answered: **cache** (same request answered before → instant) → **Gemini** (answer must pass the shared
+itinerary schema; one retry with the reason if it does not) → **offline planner** with a notice saying why (limit reached,
+AI unreachable, bad key, model retired ...) → a clear error if that destination is not covered offline either.
+"Regenerate" skips the cache.
+
+## Pages
+
+| URL | Page |
+| --- | --- |
+| `/trips/new` | Trip wizard (4 steps) |
+| `/itinerary` | A new plan that is not saved yet (survives a refresh in the same tab) |
+| `/trips/:id` | A saved trip — can be refreshed, bookmarked; "unsaved changes" banner after Regenerate |
+| `/trips/:id/edit` | Edit a saved trip's preferences and regenerate it |
+| `/my-trips` | Saved trips: Upcoming / Ongoing / Past tabs, search, sort, rename |
 
 ## Useful commands (run from the project root)
 
@@ -85,10 +109,10 @@ top banner and Profile page say so.
 | POST | `/api/auth/login` | – | Log in (`rememberMe` optional) → session cookie |
 | POST | `/api/auth/demo` | – | Log in to the shared demo account |
 | POST | `/api/auth/logout` | – | Clear the session cookie |
-| GET | `/api/auth/me` | ✔ | Current user + trip count |
-| POST | `/api/trips/generate` | ✔ | Generate an itinerary from preferences |
+| GET | `/api/auth/me` | ✔ | Current user + trip count + AI plans left today |
+| POST | `/api/trips/generate` | ✔ | Generate an itinerary → `{ data, preferences, meta: { source, cached, notice, ai } }`; `?fresh=1` skips the cache |
 | GET / POST | `/api/trips` | ✔ | List my trips / save (or update with `tripData.id`) |
-| GET / PUT / DELETE | `/api/trips/:id` | ✔ | Read / update allowed fields / delete — own trips only |
+| GET / PUT / DELETE | `/api/trips/:id` | ✔ | Read / update allowed fields (title, dates, travelers, budget) / delete — own trips only |
 | GET | `/api/places/search?q=&category=` | – | Search destinations |
 | GET | `/api/recommendations/hotels?destination=` | – | Hotel suggestions |
 | GET | `/api/recommendations/restaurants?destination=` | – | Restaurant suggestions |

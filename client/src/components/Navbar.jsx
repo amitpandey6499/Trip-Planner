@@ -63,7 +63,7 @@ export const Navbar = () => {
             {isSignedIn ? (
               <div className="relative flex items-center gap-3">
                 <Link
-                  to="/create-trip"
+                  to="/trips/new"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm shadow-blue-500/20 transition-all"
                 >
                   <Sparkles className="w-4 h-4" />
@@ -132,7 +132,7 @@ export const Navbar = () => {
                   Sign In
                 </Link>
                 <Link
-                  to="/create-trip"
+                  to="/trips/new"
                   className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm shadow-blue-500/20 hover:shadow-md transition-all"
                 >
                   <Sparkles className="w-4 h-4" />
@@ -203,7 +203,7 @@ export const Navbar = () => {
                   Sign In
                 </Link>
                 <Link
-                  to="/create-trip"
+                  to="/trips/new"
                   onClick={() => setMobileMenuOpen(false)}
                   className="block px-3 py-2.5 rounded-md text-base text-white bg-blue-600 text-center font-medium shadow-sm"
                 >

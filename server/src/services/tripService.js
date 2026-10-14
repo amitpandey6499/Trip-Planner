@@ -103,6 +103,8 @@ export const updateTrip = async (tripId, ownerId, changes) => {
       totalBudget: trip.totalBudget,
       budgetCategory: trip.budgetCategory,
     });
+    // Renamed in My Trips → the itinerary page shows the same title.
+    if (changes.title) trip.itinerary = { ...trip.itinerary, title: trip.title };
     trip.markModified('itinerary');
   }
   await trip.save();

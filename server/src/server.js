@@ -24,8 +24,8 @@ const start = async () => {
     console.log(` Health check     ->  http://localhost:${config.port}/api/health`);
     console.log(` ${collegeLabel} | ${projectInfo.academicSession}`);
     console.log('='.repeat(60));
-    if (!services.geminiAI) console.log('[AI] GEMINI_API_KEY is not set: itineraries will use sample/offline mode.');
-    else console.log(`[AI] Gemini model: ${config.gemini.model}`);
+    if (!services.geminiAI) console.log('[AI] GEMINI_API_KEY is not set: the offline planner is used (8 curated destinations).');
+    else console.log(`[AI] Gemini model: ${config.gemini.model}, ${config.gemini.dailyLimit} plans per user per day.`);
     if (config.auth.usingDevSecret) console.log('[Auth] JWT_SECRET not set: using a development-only secret (set one before deploying).');
   });
 

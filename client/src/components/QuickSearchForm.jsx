@@ -44,7 +44,7 @@ export const QuickSearchForm = () => {
     // Guests: keep what they typed, ask them to sign in, then continue in the wizard.
     if (!isSignedIn) {
       setCurrentPreferences(result.data);
-      navigate('/auth', { state: { from: '/create-trip' } });
+      navigate('/auth', { state: { from: '/trips/new' } });
       return;
     }
 
@@ -54,7 +54,7 @@ export const QuickSearchForm = () => {
     } catch {
       // Open the full wizard with everything filled in; it shows the server's message.
       setCurrentPreferences(result.data);
-      navigate('/create-trip');
+      navigate('/trips/new');
     }
   };
 

@@ -104,6 +104,9 @@ export const ItinerarySchema = z.object({
   days: z.array(DaySchema).min(1, 'An itinerary needs at least one day.').max(LIMITS.MAX_TRIP_DAYS),
   hotels: z.array(HotelSchema).max(12).catch([]).default([]),
   restaurants: z.array(RestaurantSchema).max(12).catch([]).default([]),
+  /** Which AI model wrote it (gemini only) and when. */
+  model: z.string().trim().max(60).optional().catch(undefined),
+  generatedAt: z.string().trim().max(40).optional().catch(undefined),
   // Filled by later parts. Optional, so trips saved before those parts stay valid.
   routes: z.array(z.unknown()).optional(), // Part 8
   weather: z.array(z.unknown()).optional(), // Part 11

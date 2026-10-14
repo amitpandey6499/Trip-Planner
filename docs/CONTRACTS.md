@@ -14,7 +14,7 @@ import { TripPreferencesSchema, normalizeItinerary, formatINR, tripPhase } from 
 | Money | Whole rupees (INR), **poore group ka total** (per person nahi). `formatINR(150000)` → `₹1,50,000`. |
 | Trip phase | `Upcoming / Ongoing / Past` — dates se **calculate** hota hai (`tripPhase`), DB mein store nahi hota. |
 | Errors | `{ success: false, error: 'pehla message', details: { field, fields: { name: message } } }` + sahi HTTP status. |
-| Itinerary source | `gemini` / `sample` / `offline` → UI badge `ITINERARY_SOURCES` se. |
+| Itinerary source | `gemini` (AI) / `sample` (demo trip) / `offline` (offline planner) → UI badge `ITINERARY_SOURCES` se. |
 
 ## Schemas (`shared/src/schemas/`)
 | Schema | Kahan use hota hai |
@@ -47,3 +47,30 @@ Optional hain, isliye purane saved trips kabhi invalid nahi honge.
 - Client start pe `GET /api/auth/me` poochta hai; koi bhi API 401 de to client user ko logged-out maan leta hai.
 - `req.user` (server) = `{ id, name, email, role, avatarUrl, isDemo, createdAt }` — kabhi password hash nahi.
 - Har trip query = `{ _id, owner: req.user.id }`. Doosre user ka trip "nahi mila" (404) hota hai, "forbidden" nahi — taaki pata bhi na chale ki wo id exist karti hai.
+
+## AI generation (Part 6)
+`POST /api/trips/generate` (`?fresh=1` = cache skip) ka jawab:
+```js
+{
+  success: true,
+  data: Itinerary,            // hamesha normalizeItinerary se guzra hua (AI ho ya offline)
+  preferences: TripPreferences, // validated (endDate / durationDays filled)
+  meta: {
+    source: 'gemini' | 'offline',
+    cached: boolean,          // AiCache se aaya (Gemini call nahi hua, daily limit mein count nahi)
+    notice: string | null,    // offline kyun hua: "You have used all 20 AI plans for today, so ..."
+    ai: { used, limit, left } | null, // null = Gemini key set nahi
+  },
+}
+```
+- Gemini ko `responseJsonSchema` (`server/src/services/ai/prompt.js`, Part 2 ke ItinerarySchema se match) diya jaata hai; jawab phir bhi
+  `normalizeItinerary(..., { expectDays })` se check hota hai. Galat → **1 retry** (reason ke saath), phir offline planner.
+- Itinerary pe optional `source`, `model`, `generatedAt` (`gemini` wale plans pe).
+- Errors: `422` destination offline planner mein nahi aur key bhi nahi (`details.supported` = list) · `503` Gemini fail + destination offline mein nahi · `429` daily limit khatam + destination offline mein nahi.
+- Daily limit: `AiUsage` (user + din). Cache: `AiCache` (key = preferences + model ka hash, TTL `AI_CACHE_DAYS`).
+
+## Trip URLs + draft (Part 5)
+- `/trips/:id` hamesha server se load (`GET /api/trips/:id`); same id pehle se open ho to dobara load nahi (unsaved changes bachte hain).
+- Draft = `sessionStorage['tripplanner:draft:<userId>']` = `{ itinerary, preferences, tripId, dirty, meta }` — sirf is tab ke liye, logout pe saaf.
+- `dirty = true` → Regenerate hua par save nahi: banner "Save changes / Discard changes".
+- Rename (`PUT { title }`) itinerary ka `title` bhi badalta hai.

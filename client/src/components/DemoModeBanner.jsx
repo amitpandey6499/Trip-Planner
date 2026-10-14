@@ -18,7 +18,10 @@ export const DemoModeBanner = () => {
   if (error) {
     message = 'Cannot reach the TripPlanner server. Start it with "npm run dev" from the project folder.';
   } else if (status && !status.services?.geminiAI) {
-    message = 'Gemini AI key is not configured, so itineraries come from the offline sample generator.';
+    const places = status.services.offlineDestinations ?? [];
+    message = `AI is not set up (no Gemini key), so trips are planned offline from curated places${
+      places.length ? ` for ${places.length} destinations: ${places.join(', ')}` : ''
+    }.`;
   }
   if (!message) return null;
 

@@ -55,7 +55,9 @@ export const authApi = {
 };
 
 export const tripApi = {
-  generate: (preferences) => data(api.post('/trips/generate', preferences)),
+  // fresh: true skips the server's AI cache (Regenerate)
+  generate: (preferences, { fresh = false } = {}) =>
+    data(api.post('/trips/generate', preferences, { params: fresh ? { fresh: 1 } : undefined, timeout: 120000 })),
   // body: { tripData, preferences, itinerary }
   saveTrip: (body) => data(api.post('/trips', body)),
   getTrips: () => data(api.get('/trips')),

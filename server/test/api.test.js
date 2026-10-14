@@ -37,6 +37,8 @@ test('GET /api/health reports real status and the correct college', async () => 
   assert.equal(res.body.database.type, 'MongoDB');
   assert.equal(res.body.database.connected, true);
   assert.equal(res.body.services.geminiAI, false, 'no key in tests, so AI must show as not configured');
+  assert.equal(res.body.services.offlineDestinations.length, 8);
+  assert.ok(res.body.services.offlineDestinations.includes('Manali'));
   assert.match(res.body.college, /ABES Engineering College/);
   assert.equal(res.headers['x-powered-by'], undefined);
 });
@@ -153,6 +155,9 @@ test('changing the number of days of a trip with an itinerary asks for Regenerat
   assert.match(res.body.error, /Regenerate/);
   const shifted = await alice.put(`/api/trips/${saved.body.data.id}`).send({ startDate: future(30), endDate: future(31) }).expect(200);
   assert.equal(shifted.body.data.itinerary.days[0].date, future(30), 'itinerary days move with the dates');
+  const renamed = await alice.put(`/api/trips/${saved.body.data.id}`).send({ title: 'Beach weekend' }).expect(200);
+  assert.equal(renamed.body.data.itinerary.title, 'Beach weekend', 'rename also changes the itinerary page title');
+  await alice.put(`/api/trips/${saved.body.data.id}`).send({ title: '   ' }).expect(400);
 });
 
 test('contact form: saved to the database, validated with shared rules', async () => {

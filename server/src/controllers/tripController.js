@@ -8,10 +8,11 @@ import { asyncHandler } from '../utils/asyncHandler.js';
  */
 export const tripController = {
   // POST /api/trips/generate   body: TripPreferences
+  // ?fresh=1 skips the AI cache (used by the "Regenerate" button)
   generate: asyncHandler(async (req, res) => {
     const preferences = req.body;
-    const itinerary = await generateItinerary(preferences);
-    res.status(200).json({ success: true, data: itinerary, preferences });
+    const { itinerary, meta } = await generateItinerary(preferences, { userId: req.user.id, fresh: req.query.fresh === '1' });
+    res.status(200).json({ success: true, data: itinerary, preferences, meta });
   }),
 
   // POST /api/trips   body: { tripData, preferences?, itinerary? }

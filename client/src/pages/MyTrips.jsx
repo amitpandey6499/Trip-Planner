@@ -15,8 +15,14 @@ import {
 } from 'lucide-react';
 import { formatDate, formatINR, tripPhase } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
+import TripTitle from '../components/TripTitle';
 
 const TABS = ['Upcoming', 'Ongoing', 'Past', 'All'];
+const SORTS = {
+  newest: { label: 'Newest first', compare: (a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? '')) },
+  start: { label: 'Start date', compare: (a, b) => a.startDate.localeCompare(b.startDate) },
+  budget: { label: 'Budget (high → low)', compare: (a, b) => b.totalBudget - a.totalBudget },
+};
 const PHASE_STYLES = {
   Upcoming: 'bg-blue-50 text-blue-700 border-blue-200/60',
   Ongoing: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
@@ -25,10 +31,11 @@ const PHASE_STYLES = {
 
 export const MyTrips = () => {
   const navigate = useNavigate();
-  const { savedTrips, deleteTrip, loadTripById, tripsLoading } = useTrip();
+  const { savedTrips, deleteTrip, renameTrip, tripsLoading } = useTrip();
 
   const [activeTab, setActiveTab] = useState('Upcoming');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState('newest');
   const [tripToDelete, setTripToDelete] = useState(null);
 
   // Phase is calculated from the dates (shared tripPhase), so "Past" fills itself.
@@ -39,19 +46,12 @@ export const MyTrips = () => {
     const matchesSearch =
       !query || (trip.destination ?? '').toLowerCase().includes(query) || (trip.title ?? '').toLowerCase().includes(query);
     return matchesTab && matchesSearch;
-  });
+  }).sort(SORTS[sortBy].compare);
   const countFor = (tab) => (tab === 'All' ? trips.length : trips.filter((t) => t.phase === tab).length);
 
-  const handleView = async (tripId) => {
-    const trip = await loadTripById(tripId);
-    if (trip) navigate('/itinerary');
-  };
-
-  // Wait for the trip to load (it refills the wizard), then open the wizard in edit mode.
-  const handleEdit = async (tripId) => {
-    const trip = await loadTripById(tripId);
-    if (trip) navigate('/create-trip', { state: { editTripId: tripId } });
-  };
+  // Every trip has its own address (Part 5); the pages load the trip from the URL.
+  const handleView = (tripId) => navigate(`/trips/${tripId}`);
+  const handleEdit = (tripId) => navigate(`/trips/${tripId}/edit`);
 
   const confirmDelete = async () => {
     if (tripToDelete) {
@@ -76,7 +76,7 @@ export const MyTrips = () => {
           </div>
 
           <Link
-            to="/create-trip"
+            to="/trips/new"
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-500/20 transition-all self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
@@ -104,16 +104,31 @@ export const MyTrips = () => {
             ))}
           </div>
 
-          {/* Search bar */}
-          <div className="w-full sm:w-64 relative">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search saved trips..."
-              className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
-            />
+          {/* Sort + search */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
+            <label className="sr-only" htmlFor="trip-sort">Sort trips</label>
+            <select
+              id="trip-sort"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="py-2 px-2.5 rounded-xl border border-slate-200 text-xs text-slate-700 bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            >
+              {Object.entries(SORTS).map(([value, { label }]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <div className="w-full sm:w-64 relative">
+              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search saved trips..."
+                className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-200 text-xs text-slate-800 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-600"
+              />
+            </div>
           </div>
 
         </div>
@@ -150,9 +165,7 @@ export const MyTrips = () => {
                       )}
                     </div>
 
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900">
-                      {trip.title || `${trip.destination} Trip`}
-                    </h3>
+                    <TripTitle trip={trip} onRename={renameTrip} />
 
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
@@ -215,7 +228,7 @@ export const MyTrips = () => {
               Start planning your next getaway with the AI itinerary generator.
             </p>
             <Link
-              to="/create-trip"
+              to="/trips/new"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-md shadow-blue-500/20"
             >
               <Plus className="w-4 h-4" />

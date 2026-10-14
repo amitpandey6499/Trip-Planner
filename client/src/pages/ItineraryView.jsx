@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Calendar,
   Users,
@@ -13,17 +13,26 @@ import {
   Utensils,
   Map,
   PieChart,
-  Check,
   ChevronRight,
-  Loader2,
   AlertTriangle,
   CheckCircle2,
-  Plus
+  Plus,
+  Pencil,
+  Info,
+  Database,
+  Undo2,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { ITINERARY_SOURCES, formatDate, formatINR } from '@tripplanner/shared';
+import { ITINERARY_SOURCES, LIMITS, addDays, formatDate, formatINR, todayIso } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
+import { useTripFromUrl } from '../hooks/useTripFromUrl';
+import { PageLoader, TripNotFound } from '../components/PageState';
+import DayTimeline from '../components/DayTimeline';
+import InteractiveMap from '../components/InteractiveMap';
+import HotelCard from '../components/HotelCard';
+import RestaurantCard from '../components/RestaurantCard';
+import CostBreakdown from '../components/CostBreakdown';
 
 /** Plain-text version of the itinerary for the clipboard (real share links come in Part 14). */
 const itineraryAsText = (it) =>
@@ -37,51 +46,73 @@ const itineraryAsText = (it) =>
       '',
     ]),
   ].join('\n');
-import DayTimeline from '../components/DayTimeline';
-import InteractiveMap from '../components/InteractiveMap';
-import HotelCard from '../components/HotelCard';
-import RestaurantCard from '../components/RestaurantCard';
-import CostBreakdown from '../components/CostBreakdown';
 
+// Confetti only for a plan that was just generated (not when a saved trip is opened or the page is refreshed).
+let lastCelebratedGeneration = 0;
+
+/**
+ * /trips/:id   → a saved trip (loaded from the server; survives refresh, can be bookmarked)
+ * /itinerary   → a new plan that is not saved yet (kept in this tab's session draft)
+ */
 export const ItineraryView = () => {
+  const { id } = useParams();
+  const { currentTripId, draftReady, error } = useTrip();
+  const status = useTripFromUrl(id);
+
+  // The draft page only holds unsaved plans: once saved (or a saved trip is open) use its own URL.
+  if (!id && draftReady && currentTripId) return <Navigate to={`/trips/${currentTripId}`} replace />;
+  if (status === 'loading') return <PageLoader title="Loading your trip..." />;
+  if (status === 'missing') return <TripNotFound message={error} />;
+  return <ItineraryPage />;
+};
+
+const ItineraryPage = () => {
+  const navigate = useNavigate();
   const {
     currentItinerary,
     currentPreferences,
     currentTripId,
+    isDirty,
+    lastMeta,
+    generationId,
     saveCurrentTrip,
     generateTrip,
+    loadTripById,
+    tripLoading,
     saving,
     loading,
     error,
-    successToast
   } = useTrip();
 
-  const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary' | 'map' | 'hotels' | 'restaurants' | 'places' | 'cost'
+  const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary' | 'map' | 'hotels' | 'restaurants' | 'cost'
   const [selectedDayNumber, setSelectedDayNumber] = useState(1);
   const [copied, setCopied] = useState(false);
 
-  // Whenever a different itinerary is shown: back to day 1, and a small celebration.
+  // A new plan (or a different trip) starts at day 1.
   useEffect(() => {
-    if (!currentItinerary) return;
     setSelectedDayNumber(1);
+  }, [generationId, currentTripId]);
+
+  useEffect(() => {
+    if (!generationId || generationId <= lastCelebratedGeneration) return;
+    lastCelebratedGeneration = generationId;
     try {
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 } });
     } catch {
       // canvas not available (e.g. headless browser) — not important
     }
-  }, [currentItinerary]);
+  }, [generationId]);
 
   if (loading) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-8 space-y-4">
-        <Loader2 className="w-12 h-12 text-blue-600 animate-spin" />
-        <h2 className="text-xl font-bold text-slate-800">Building your itinerary...</h2>
-        <p className="text-sm text-slate-500 max-w-sm text-center">Planning visit times, costs, stays and restaurants for each day.</p>
-      </div>
+      <PageLoader
+        title="Building your itinerary..."
+        text="Planning visit times, costs, stays and restaurants for each day. With AI this can take up to a minute."
+      />
     );
   }
 
-  // Opening /itinerary directly no longer generates a random trip: show what to do instead.
+  // Opening /itinerary directly does not generate anything: show what to do instead.
   if (!currentItinerary) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-8">
@@ -90,7 +121,7 @@ export const ItineraryView = () => {
           <h2 className="text-xl font-bold text-slate-800">No itinerary open</h2>
           <p className="text-sm text-slate-500">Create a new trip or open one of your saved trips.</p>
           <div className="flex gap-2 justify-center">
-            <Link to="/create-trip" className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">
+            <Link to="/trips/new" className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold">
               <Plus className="w-4 h-4" /> Create a Trip
             </Link>
             <Link to="/my-trips" className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold">
@@ -103,7 +134,12 @@ export const ItineraryView = () => {
   }
 
   const days = currentItinerary.days || [];
-  const selectedDay = days.find(d => d.dayNumber === selectedDayNumber) || days[0];
+  const selectedDay = days.find((d) => d.dayNumber === selectedDayNumber) || days[0];
+  const isSaved = Boolean(currentTripId);
+  const editPath = isSaved ? `/trips/${currentTripId}/edit` : '/trips/new';
+  // The server refuses plans that start in the past, so an old trip needs new dates first.
+  const datesInPast = !currentPreferences.startDate || currentPreferences.startDate < addDays(todayIso(), -LIMITS.PAST_DATE_GRACE_DAYS);
+  const aiLeft = lastMeta?.ai ? lastMeta.ai.left : null;
 
   const handleCopy = async () => {
     try {
@@ -119,24 +155,29 @@ export const ItineraryView = () => {
     window.print();
   };
 
+  const handleSave = async () => {
+    // On /itinerary the page then moves to /trips/:id by itself (see ItineraryView).
+    await saveCurrentTrip();
+  };
+
   const handleRegenerate = () => {
-    // Keeps the saved-trip link, so "Update Trip" overwrites instead of duplicating.
-    generateTrip(currentPreferences, { tripId: currentTripId }).catch(() => {});
+    if (datesInPast) {
+      navigate(editPath);
+      return;
+    }
+    // fresh: skip the AI cache. tripId: "Update Trip" then overwrites the saved trip (no duplicate).
+    generateTrip(currentPreferences, { tripId: currentTripId, fresh: true }).catch(() => {});
+  };
+
+  const handleDiscard = () => {
+    loadTripById(currentTripId);
   };
 
   const overBudgetBy = currentItinerary.withinBudget ? 0 : currentItinerary.estimatedTotal - currentItinerary.totalBudget;
 
   return (
     <div className="min-h-screen py-8 sm:py-10 px-4 sm:px-6 lg:px-8 bg-slate-50">
-      <div className="max-w-7xl mx-auto space-y-8">
-        
-        {/* Toast Alert */}
-        {successToast && (
-          <div className="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-xs font-semibold animate-in fade-in slide-in-from-bottom-2 border border-slate-700">
-            <Check className="w-4 h-4 text-emerald-400" />
-            <span>{successToast}</span>
-          </div>
-        )}
+      <div className="max-w-7xl mx-auto space-y-6">
 
         {error && (
           <div className="p-4 rounded-xl bg-red-50 text-red-700 text-xs border border-red-200 flex items-center gap-2 no-print" role="alert">
@@ -145,14 +186,64 @@ export const ItineraryView = () => {
           </div>
         )}
 
-        {/* 1. TOP HEADER & CONTROLS (Screen 5) */}
+        {/* Why this plan did not come from the AI (limit reached, AI unreachable ...) */}
+        {lastMeta?.notice && (
+          <div className="p-4 rounded-xl bg-amber-50 text-amber-900 text-xs border border-amber-200 flex items-start gap-2 no-print" role="status">
+            <Info className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <span>{lastMeta.notice}</span>
+          </div>
+        )}
+
+        {isDirty && isSaved && (
+          <div
+            className="p-4 rounded-xl bg-blue-50 text-blue-900 text-xs border border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 no-print"
+            role="status"
+            data-testid="unsaved-banner"
+          >
+            <span className="flex items-center gap-2 font-semibold">
+              <AlertTriangle className="w-4 h-4 flex-shrink-0 text-blue-600" />
+              This is a new version of your saved trip. It is not saved yet.
+            </span>
+            <div className="flex gap-2">
+              <button
+                onClick={handleDiscard}
+                disabled={tripLoading || saving}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-blue-200 bg-white hover:bg-blue-100/50 font-semibold disabled:opacity-60"
+              >
+                <Undo2 className="w-3.5 h-3.5" /> {tripLoading ? 'Restoring...' : 'Discard changes'}
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold disabled:opacity-60"
+              >
+                <BookmarkCheck className="w-3.5 h-3.5" /> {saving ? 'Saving...' : 'Save changes'}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 1. TOP HEADER & CONTROLS */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full flex items-center gap-1">
                 <Sparkles className="w-3 h-3 text-blue-500" />
                 {ITINERARY_SOURCES[currentItinerary.source] ?? 'Itinerary'}
               </span>
+              {lastMeta?.cached && (
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wider text-slate-600 bg-slate-100 px-2.5 py-1 rounded-full flex items-center gap-1"
+                  title="The same request was answered earlier, so it was loaded instantly. Use Regenerate for a fresh plan."
+                >
+                  <Database className="w-3 h-3" /> From cache
+                </span>
+              )}
+              {!isSaved && (
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full">
+                  Not saved yet
+                </span>
+              )}
             </div>
 
             <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-slate-900 tracking-tight">
@@ -163,7 +254,6 @@ export const ItineraryView = () => {
               {currentItinerary.summary || 'A personalized itinerary based on your preferences'}
             </p>
 
-            {/* Badges row matching mockup */}
             <div className="flex flex-wrap items-center gap-2 pt-2 text-xs font-semibold">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700">
                 <Clock className="w-3.5 h-3.5 text-blue-600" />
@@ -196,42 +286,60 @@ export const ItineraryView = () => {
           </div>
 
           {/* Top Action Buttons (no-print) */}
-          <div className="flex flex-wrap items-center gap-2.5 no-print">
-            <button
-              onClick={saveCurrentTrip}
-              disabled={saving}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all active:scale-95 disabled:opacity-75 cursor-pointer"
-            >
-              <BookmarkCheck className="w-4 h-4" />
-              <span>{saving ? 'Saving...' : currentTripId ? 'Update Trip' : 'Save Trip'}</span>
-            </button>
+          <div className="flex flex-col items-start lg:items-end gap-2 no-print">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={handleSave}
+                disabled={saving || (isSaved && !isDirty)}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm shadow-md shadow-blue-500/25 transition-all active:scale-95 disabled:opacity-75 disabled:active:scale-100"
+              >
+                {isSaved && !isDirty ? <CheckCircle2 className="w-4 h-4" /> : <BookmarkCheck className="w-4 h-4" />}
+                <span>{saving ? 'Saving...' : !isSaved ? 'Save Trip' : isDirty ? 'Update Trip' : 'Saved'}</span>
+              </button>
 
-            <button
-              onClick={handleCopy}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
-              title="Copy the itinerary as text"
-            >
-              <Share2 className="w-4 h-4 text-slate-500" />
-              <span>{copied ? 'Copied!' : 'Copy'}</span>
-            </button>
+              <Link
+                to={editPath}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
+                title="Change destination, dates, budget or preferences"
+              >
+                <Pencil className="w-4 h-4 text-slate-500" />
+                <span>Edit</span>
+              </Link>
 
-            <button
-              onClick={handlePrint}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
-              title="Print this page (full PDF export comes in Part 14)"
-            >
-              <Printer className="w-4 h-4 text-slate-500" />
-              <span className="hidden sm:inline">Print</span>
-            </button>
+              <button
+                onClick={handleCopy}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
+                title="Copy the itinerary as text"
+              >
+                <Share2 className="w-4 h-4 text-slate-500" />
+                <span>{copied ? 'Copied!' : 'Copy'}</span>
+              </button>
 
-            <button
-              onClick={handleRegenerate}
-              disabled={loading}
-              className="p-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-all"
-              title="Regenerate Itinerary"
-            >
-              <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
-            </button>
+              <button
+                onClick={handlePrint}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
+                title="Print this page (full PDF export comes in Part 14)"
+              >
+                <Printer className="w-4 h-4 text-slate-500" />
+                <span className="hidden sm:inline">Print</span>
+              </button>
+
+              <button
+                onClick={handleRegenerate}
+                disabled={loading}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
+                title={datesInPast ? 'These dates are in the past: pick new dates first' : 'Make a fresh plan with the same preferences'}
+                aria-label="Regenerate itinerary"
+              >
+                <RefreshCw className={`w-4 h-4 text-slate-500 ${loading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Regenerate</span>
+              </button>
+            </div>
+            {aiLeft !== null && (
+              <p className="text-[11px] text-slate-500" data-testid="ai-left">
+                {aiLeft} of {lastMeta.ai.limit} AI plans left today
+              </p>
+            )}
           </div>
         </div>
 
@@ -344,9 +452,7 @@ export const ItineraryView = () => {
           <div className="space-y-4">
             <InteractiveMap
               stops={selectedDay?.activities || []}
-              dayTitle={`Day ${selectedDayNumber} - ${selectedDay?.title || 'Route'}`}
-              totalDistance="98 km (approx.)"
-              estimatedTime="3.5 hours"
+              dayTitle={`Day ${selectedDay?.dayNumber ?? 1} - ${selectedDay?.title || 'Route'}`}
             />
           </div>
         )}

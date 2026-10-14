@@ -4,6 +4,55 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Parts 5 + 6 — Trip URLs + Real Gemini AI (tags `part-5`, `part-6`, ek hi commit)
+
+Part 6 ka "regenerate / unsaved changes" Part 5 ke URLs pe tika hai, isliye dono ek saath.
+
+### Chalane ke liye
+1. `npm install` (`@google/genai` naya; purana `@google/generative-ai` hata)
+2. **AI on karna ho to:** https://aistudio.google.com/apikey se free key → `server/.env` mein `GEMINI_API_KEY=...`
+3. `npm run dev` → terminal: `[AI] Gemini model: gemini-3.8-flash, 20 plans per user per day.`
+   (key nahi → `[AI] GEMINI_API_KEY is not set: the offline planner is used (8 curated destinations).`)
+
+**Naye env variables (sab optional):** `AI_DAILY_LIMIT` (20), `AI_TIMEOUT_SECONDS` (45), `AI_CACHE_DAYS` (7). `GEMINI_MODEL` pehle se tha —
+Google model band kare to app saaf bolega "model not found (check GEMINI_MODEL)"; naya naam https://ai.google.dev/gemini-api/docs/models se.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Itinerary sirf `/itinerary` pe, refresh = trip gayab | har saved trip ka URL `/trips/:id` (refresh, bookmark, naya tab) |
+| Generate ke baad refresh = plan gayab | session draft: refresh ke baad bhi wahi plan |
+| Regenerate kiya to pata nahi chalta save hua ya nahi | "new version, not saved yet" banner: Save changes / Discard changes |
+| My Trips mein naam badal nahi sakte, sort nahi | inline rename, sort (newest / start date / budget) |
+| Purana SDK `@google/generative-ai` (support khatam), prompt mein pace/diet/stay nahi | `@google/genai`, JSON schema output, retry, timeout, pura prompt |
+| Key na ho to fake "Landmark 1A, Restaurant 2" itinerary | offline planner: 8 destinations ke asli places, timings, fees, veg/non-veg food |
+| Har request pe AI call | AiCache (same request free), per-user daily limit |
+| AI fail → 500 / ajeeb error | offline planner + notice kyun; warna 422/503/429 saaf message |
+| Hotels/restaurants pe nakli 4.5★, map pe "98 km / 3.5 hours" | sirf asli rating; distance stops ke coordinates se (straight-line) |
+| Kisi page pe crash = poori app white | ErrorBoundary (Reload / Home) |
+
+### Naye files
+- `server/src/services/ai/{geminiClient,prompt,aiCache,offlinePlanner}.js`, `server/src/data/offlineDestinations.js`
+- `server/src/models/{AiCache,AiUsage}.js`
+- `server/test/{ai,offlinePlanner}.test.js`
+- `client/src/components/{ErrorBoundary,PageState,TripTitle,Toast}.jsx`, `client/src/hooks/useTripFromUrl.js`
+
+### Hataye gaye
+- Purana random itinerary generator (`aiService.js` ke andar) aur `@google/generative-ai` dependency.
+
+### Doosre parts pe asar
+- **Part 7 (deploy):** Render pe `GEMINI_API_KEY` env var daalna; baaki AI settings optional.
+- **Part 8 (map):** offline planner ke places ke paas pehle se coordinates hain; Gemini wale places ke liye geocoding Part 8 mein.
+- **Part 9 (streaming):** `generateItinerary()` ek hi jagah hai — streaming wahi se nikalegi; "regenerate one day" `?fresh=1` jaisa.
+- **Part 13 (chat):** AI ka jawab check karne ka tareeka (`normalizeItinerary` + retry) wahi reuse hoga.
+- **Part 14 (share):** share link `/trips/:id` jaisa hi `/share/:slug` hoga.
+
+### Tests
+- Server **47** (AI 10 — fake Gemini client se, bina internet; offline planner 8; auth 10; API 14; trips 4), shared 27.
+- Browser: 16 naye checks (URLs, refresh, draft, unsaved banner, discard, rename, sort, not-found, doosra user) + purane 26 checks naye URLs ke saath.
+
+---
+
 ## Parts 3 + 4 — MongoDB Atlas + JWT login (tags `part-3`, `part-4`, ek hi commit)
 
 Dono parts ek saath maange gaye the aur ek doosre se jude hain (login ke bina user-wise data ka matlab nahi), isliye ek commit.

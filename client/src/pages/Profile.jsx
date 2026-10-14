@@ -30,7 +30,7 @@ const StatusCard = ({ title, state, label, detail }) => {
 };
 
 /** Turns GET /api/health into status cards. Nothing here is hardcoded "green". */
-const buildStatusCards = (status, error) => {
+const buildStatusCards = (status, error, aiUsage) => {
   if (error || !status) {
     return [
       { title: 'Backend API', state: 'error', label: 'Offline', detail: 'Server not reachable. Run "npm run dev" in the project folder.' },
@@ -50,7 +50,9 @@ const buildStatusCards = (status, error) => {
       title: 'Google Gemini AI',
       state: services.geminiAI ? 'ok' : 'warn',
       label: services.geminiAI ? 'Configured' : 'Not configured',
-      detail: services.geminiAI ? `Model: ${services.aiModel}` : 'Add GEMINI_API_KEY in server/.env. Until then the offline sample generator is used.',
+      detail: services.geminiAI
+        ? `Model: ${services.aiModel}${aiUsage ? ` • ${aiUsage.left} of ${aiUsage.limit} AI plans left today` : ''}`
+        : `Add GEMINI_API_KEY in server/.env. Until then the offline planner is used (${(services.offlineDestinations ?? []).length} destinations).`,
     },
     {
       title: 'Google Places',
@@ -66,7 +68,7 @@ export const Profile = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
   const { status, error, loading } = useSystemStatus();
-  const cards = buildStatusCards(status, error);
+  const cards = buildStatusCards(status, error, user?.ai);
 
   // Fresh trip count every time the profile opens.
   useEffect(() => {

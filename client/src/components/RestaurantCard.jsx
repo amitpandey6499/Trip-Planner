@@ -16,11 +16,13 @@ export const RestaurantCard = ({ restaurant, onSelectOnMap }) => {
           }}
         />
 
-        {/* Rating */}
-        <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-white/95 backdrop-blur-xs flex items-center gap-1 shadow-xs text-xs font-bold text-slate-800">
-          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span>{restaurant.rating || 4.6}</span>
-        </div>
+        {/* Only real ratings are shown (no made-up stars) */}
+        {restaurant.rating > 0 && (
+          <div className="absolute top-3 right-3 px-2 py-1 rounded-lg bg-white/95 backdrop-blur-xs flex items-center gap-1 shadow-xs text-xs font-bold text-slate-800">
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <span>{restaurant.rating}</span>
+          </div>
+        )}
       </div>
 
       {/* Details */}

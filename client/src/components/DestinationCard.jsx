@@ -16,7 +16,7 @@ export const DestinationCard = ({ destination, onQuickView }) => {
       // destination tags ('Forts', 'Mountains') → wizard interests ('History & Culture', ...)
       interests: tagsToInterests(destination.tags)
     }));
-    navigate('/create-trip');
+    navigate('/trips/new');
   };
 
   return (

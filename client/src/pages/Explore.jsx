@@ -43,7 +43,7 @@ export const Explore = () => {
       interests: tagsToInterests(dest.tags)
     }));
     setSelectedDestModal(null);
-    navigate('/create-trip');
+    navigate('/trips/new');
   };
 
   return (

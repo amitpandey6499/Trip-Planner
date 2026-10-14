@@ -57,7 +57,7 @@ export const Home = () => {
               {/* CTAs */}
               <div className="flex flex-wrap items-center gap-4 pt-2">
                 <Link
-                  to="/create-trip"
+                  to="/trips/new"
                   className="inline-flex items-center gap-2 px-6 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm sm:text-base shadow-lg shadow-blue-600/30 hover:shadow-xl transition-all active:scale-95"
                 >
                   <span>Plan Your Trip</span>
@@ -357,7 +357,7 @@ export const Home = () => {
           </div>
 
           <Link
-            to="/create-trip"
+            to="/trips/new"
             className="px-6 py-3.5 rounded-xl bg-white text-blue-700 hover:bg-blue-50 font-bold text-sm shadow-md transition-all whitespace-nowrap active:scale-95"
           >
             Start Planning Now →

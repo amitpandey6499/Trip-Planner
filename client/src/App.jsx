@@ -1,11 +1,14 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { TripProvider } from './context/TripContext';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import DemoModeBanner from './components/DemoModeBanner';
+import Toast from './components/Toast';
 import ProtectedRoute from './components/ProtectedRoute';
+import ErrorBoundary from './components/ErrorBoundary';
 
 import Home from './pages/Home';
 import Auth from './pages/Auth';
@@ -21,36 +24,60 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 
+/** A crash on one page shows a friendly message; moving to another page clears it. */
+const ErrorBoundaryForRoute = ({ children }) => {
+  const location = useLocation();
+  return <ErrorBoundary key={location.pathname}>{children}</ErrorBoundary>;
+};
+
+/** A new page starts at the top (React Router keeps the old scroll position otherwise). */
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+  return null;
+};
+
 export const App = () => {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <AuthProvider>
         <TripProvider>
           <div className="flex flex-col min-h-screen">
             <DemoModeBanner />
             <Navbar />
             <main className="flex-1">
-              <Routes>
-                {/* Public pages */}
-                <Route path="/" element={<Home />} />
-                <Route path="/auth" element={<Auth />} />
-                <Route path="/explore" element={<Explore />} />
-                <Route path="/map" element={<MapView />} />
-                <Route path="/hotels" element={<HotelsView />} />
-                <Route path="/restaurants" element={<RestaurantsView />} />
-                <Route path="/about" element={<About />} />
-                <Route path="/contact" element={<Contact />} />
+              <ErrorBoundaryForRoute>
+                <Routes>
+                  {/* Public pages */}
+                  <Route path="/" element={<Home />} />
+                  <Route path="/auth" element={<Auth />} />
+                  <Route path="/explore" element={<Explore />} />
+                  <Route path="/map" element={<MapView />} />
+                  <Route path="/hotels" element={<HotelsView />} />
+                  <Route path="/restaurants" element={<RestaurantsView />} />
+                  <Route path="/about" element={<About />} />
+                  <Route path="/contact" element={<Contact />} />
 
-                {/* Need login (trips belong to a user; AI generation uses quota) */}
-                <Route path="/create-trip" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
-                <Route path="/itinerary" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
-                <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+                  {/* Trips (need login). Every saved trip has its own URL, so refresh / bookmarks work. */}
+                  <Route path="/trips/new" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
+                  <Route path="/trips/:id" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
+                  <Route path="/trips/:id/edit" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
+                  {/* A freshly generated, not-yet-saved itinerary */}
+                  <Route path="/itinerary" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
+                  <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
+                  <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
 
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  {/* Old address from before Part 5 */}
+                  <Route path="/create-trip" element={<Navigate to="/trips/new" replace />} />
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </ErrorBoundaryForRoute>
             </main>
             <Footer />
+            <Toast />
           </div>
         </TripProvider>
       </AuthProvider>

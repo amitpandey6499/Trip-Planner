@@ -54,14 +54,43 @@ const upgradeItinerary = (itinerary, facts) => {
   }
 };
 
+/**
+ * The itinerary you are looking at survives a page refresh: it is kept in sessionStorage
+ * (per user, per browser tab; cleared on logout). Saved trips are always re-loaded from the server.
+ */
+const draftKey = (userId) => `tripplanner:draft:${userId}`;
+const readDraft = (userId) => {
+  try {
+    const raw = sessionStorage.getItem(draftKey(userId));
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+const writeDraft = (userId, draft) => {
+  try {
+    if (draft) sessionStorage.setItem(draftKey(userId), JSON.stringify(draft));
+    else sessionStorage.removeItem(draftKey(userId));
+  } catch {
+    // storage full or blocked (private mode): the app still works, the draft just won't survive a refresh
+  }
+};
+
 export const TripProvider = ({ children }) => {
   const { user } = useAuth();
   const [currentItinerary, setCurrentItinerary] = useState(null);
   const [currentPreferences, setCurrentPreferences] = useState(makeDefaultPreferences);
   // id of the saved trip the current itinerary belongs to (null = not saved yet)
   const [currentTripId, setCurrentTripId] = useState(null);
+  // true when the shown itinerary has changes that are not saved yet
+  const [isDirty, setIsDirty] = useState(false);
+  // info from the last generation: { source, cached, notice, ai }
+  const [lastMeta, setLastMeta] = useState(null);
+  // goes up by one after every successful generation (the itinerary page celebrates new plans only)
+  const [generationId, setGenerationId] = useState(0);
   const [savedTrips, setSavedTrips] = useState([]);
   const [loading, setLoading] = useState(false); // generating an itinerary
+  const [tripLoading, setTripLoading] = useState(false); // opening one saved trip
   const [tripsLoading, setTripsLoading] = useState(false); // loading My Trips
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
@@ -89,21 +118,25 @@ export const TripProvider = ({ children }) => {
   }, []);
 
   /**
-   * Generate an itinerary. Pass { tripId } when editing a saved trip, so "Save" updates it
-   * instead of creating a duplicate.
+   * Generate an itinerary.
+   *   tripId → editing that saved trip ("Update Trip" overwrites it, no duplicate)
+   *   fresh  → skip the server's AI cache (Regenerate button)
    */
   const generateTrip = useCallback(
-    async (preferences, { tripId = null } = {}) => {
+    async (preferences, { tripId = null, fresh = false } = {}) => {
       try {
         setLoading(true);
         setError(null);
         setCurrentPreferences(preferences);
-        const res = await tripApi.generate(preferences);
+        const res = await tripApi.generate(preferences, { fresh });
         // The server returns validated preferences (endDate filled in, defaults applied).
         setCurrentPreferences(res.preferences ?? preferences);
         setCurrentItinerary(res.data);
         setCurrentTripId(tripId);
-        showToast(`Itinerary generated for ${res.data.destination}!`);
+        setIsDirty(true);
+        setLastMeta(res.meta ?? null);
+        setGenerationId((n) => n + 1);
+        showToast(res.meta?.cached ? `Loaded a saved AI plan for ${res.data.destination}` : `Itinerary generated for ${res.data.destination}!`);
         return res.data;
       } catch (err) {
         setError(err.message || 'Something went wrong');
@@ -115,7 +148,7 @@ export const TripProvider = ({ children }) => {
     [showToast],
   );
 
-  /** Save (first time) or update (already saved) the current itinerary. */
+  /** Save (first time) or update (already saved) the current itinerary. Returns the saved trip. */
   const saveCurrentTrip = useCallback(async () => {
     if (!currentItinerary) return null;
     try {
@@ -135,6 +168,8 @@ export const TripProvider = ({ children }) => {
       };
       const res = await tripApi.saveTrip({ tripData, preferences: stylePreferences(p), itinerary: currentItinerary });
       setCurrentTripId(res.data.id);
+      setCurrentItinerary(res.data.itinerary ?? currentItinerary);
+      setIsDirty(false);
       showToast(currentTripId ? 'Trip updated!' : 'Trip successfully saved to your dashboard!');
       fetchTrips();
       return res.data;
@@ -151,7 +186,11 @@ export const TripProvider = ({ children }) => {
       try {
         await tripApi.deleteTrip(id);
         setSavedTrips((prev) => prev.filter((t) => t.id !== id));
-        if (id === currentTripId) setCurrentTripId(null);
+        if (id === currentTripId) {
+          setCurrentTripId(null);
+          setCurrentItinerary(null);
+          setIsDirty(false);
+        }
         showToast('Trip deleted successfully');
       } catch (err) {
         setError(`Failed to delete trip: ${err.message}`);
@@ -160,10 +199,22 @@ export const TripProvider = ({ children }) => {
     [currentTripId, showToast],
   );
 
-  /** Load a saved trip into the itinerary view and refill the wizard with its facts. */
+  /** Rename a saved trip (PUT /api/trips/:id { title }). Throws on failure. */
+  const renameTrip = useCallback(
+    async (id, title) => {
+      const res = await tripApi.updateTrip(id, { title });
+      setSavedTrips((prev) => prev.map((t) => (t.id === id ? { ...t, title: res.data.title } : t)));
+      if (id === currentTripId) setCurrentItinerary((it) => (it ? { ...it, title: res.data.title } : it));
+      showToast('Trip renamed');
+      return res.data;
+    },
+    [currentTripId, showToast],
+  );
+
+  /** Load a saved trip (by URL id) into the itinerary view and refill the wizard with its data. */
   const loadTripById = useCallback(async (id) => {
     try {
-      setLoading(true);
+      setTripLoading(true);
       setError(null);
       const res = await tripApi.getTripById(id);
       const trip = res.data;
@@ -171,31 +222,59 @@ export const TripProvider = ({ children }) => {
       setCurrentPreferences((prev) => ({ ...prev, ...(trip.preferences ?? {}), ...facts }));
       setCurrentItinerary(upgradeItinerary(trip.itinerary, facts));
       setCurrentTripId(trip.id);
+      setIsDirty(false);
+      setLastMeta(null);
       return trip;
     } catch (err) {
-      setError(`Failed to load trip: ${err.message}`);
+      setError(err.response?.status === 404 ? 'This trip does not exist or is not yours.' : `Failed to load trip: ${err.message}`);
       return null;
     } finally {
-      setLoading(false);
+      setTripLoading(false);
     }
   }, []);
 
   // Trips belong to the logged-in user: reload on login, clear everything on logout / user switch.
   const previousUserId = useRef(null);
+  const [draftReady, setDraftReady] = useState(false);
   useEffect(() => {
     const userId = user?.id ?? null;
     const previous = previousUserId.current;
     previousUserId.current = userId;
     if (previous && previous !== userId) {
+      writeDraft(previous, null);
       setSavedTrips([]);
       setCurrentItinerary(null);
       setCurrentTripId(null);
+      setIsDirty(false);
+      setLastMeta(null);
       setCurrentPreferences(makeDefaultPreferences());
       setError(null);
     }
-    // (Guest → login keeps the wizard values the guest already typed.)
-    if (userId) fetchTrips();
+    if (userId) {
+      // (Guest → login keeps the wizard values the guest already typed.)
+      const draft = readDraft(userId);
+      if (draft?.itinerary) {
+        setCurrentItinerary(draft.itinerary);
+        setCurrentPreferences((prev) => ({ ...prev, ...draft.preferences }));
+        setCurrentTripId(draft.tripId ?? null);
+        setIsDirty(Boolean(draft.dirty));
+        setLastMeta(draft.meta ?? null);
+      }
+      fetchTrips();
+    }
+    setDraftReady(Boolean(userId));
   }, [user?.id, fetchTrips]);
+
+  // Keep the draft in sessionStorage up to date.
+  useEffect(() => {
+    if (!user?.id || !draftReady) return;
+    writeDraft(
+      user.id,
+      currentItinerary
+        ? { itinerary: currentItinerary, preferences: currentPreferences, tripId: currentTripId, dirty: isDirty, meta: lastMeta }
+        : null,
+    );
+  }, [user?.id, draftReady, currentItinerary, currentPreferences, currentTripId, isDirty, lastMeta]);
 
   return (
     <TripContext.Provider
@@ -205,8 +284,13 @@ export const TripProvider = ({ children }) => {
         currentPreferences,
         setCurrentPreferences,
         currentTripId,
+        isDirty,
+        lastMeta,
+        generationId,
+        draftReady,
         savedTrips,
         loading,
+        tripLoading,
         tripsLoading,
         saving,
         error,
@@ -216,6 +300,7 @@ export const TripProvider = ({ children }) => {
         generateTrip,
         saveCurrentTrip,
         deleteTrip,
+        renameTrip,
         fetchTrips,
         loadTripById,
       }}

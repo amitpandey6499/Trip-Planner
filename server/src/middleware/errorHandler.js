@@ -26,7 +26,10 @@ export const errorHandler = (err, req, res, _next) => {
 
   if (status < 400 || status > 599) status = 500;
 
-  if (status >= 500) {
+  // ApiErrors are messages we wrote on purpose (safe to show). Anything else that is a 5xx is a bug.
+  const expected = err instanceof ApiError || status < 500;
+
+  if (!expected) {
     console.error(`[Error] ${req.method} ${req.originalUrl}`, err);
     // Never leak internal details to users in production.
     if (config.isProd) message = 'Something went wrong on our side. Please try again.';
@@ -37,7 +40,7 @@ export const errorHandler = (err, req, res, _next) => {
   res.status(status).json({
     success: false,
     error: message,
-    ...(err.details !== undefined && status < 500 && { details: err.details }),
-    ...(config.isDev && status >= 500 && { stack: err.stack }),
+    ...(err.details !== undefined && expected && { details: err.details }),
+    ...(config.isDev && !expected && { stack: err.stack }),
   });
 };

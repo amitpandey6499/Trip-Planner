@@ -1,7 +1,16 @@
 import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Clock, Navigation, Gauge } from 'lucide-react';
+import { Clock, Navigation, MapPin } from 'lucide-react';
+
+/** Straight-line (as the crow flies) distance in km. Real road routes come in Part 8 (OSRM). */
+const haversineKm = (a, b) => {
+  const toRad = (deg) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a.lat)) * Math.cos(toRad(b.lat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371 * Math.asin(Math.sqrt(h));
+};
 
 // Fix Leaflet marker icon issue in Vite/Webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -56,8 +65,6 @@ const MapRecenter = ({ center }) => {
 export const InteractiveMap = ({
   stops = [],
   dayTitle = 'Day Route View',
-  totalDistance = '98 km (approx.)',
-  estimatedTime = '3.5 hours',
   defaultCenter = [32.2432, 77.1892]
 }) => {
   // Extract coordinates for markers and polylines
@@ -68,6 +75,9 @@ export const InteractiveMap = ({
     : defaultCenter;
 
   const polylinePositions = validStops.map(s => [s.coordinates.lat, s.coordinates.lng]);
+
+  const straightLineKm = validStops.slice(1).reduce((sum, stop, i) => sum + haversineKm(validStops[i].coordinates, stop.coordinates), 0);
+  const totalDistance = validStops.length > 1 ? `≈ ${straightLineKm < 10 ? straightLineKm.toFixed(1) : Math.round(straightLineKm)} km` : '—';
 
   const mapboxToken = import.meta.env.VITE_MAPBOX_ACCESS_TOKEN;
   const tileUrl = mapboxToken
@@ -117,7 +127,7 @@ export const InteractiveMap = ({
 
                   <span className="font-semibold text-slate-600 flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-200/80">
                     <Clock className="w-3 h-3 text-blue-600" />
-                    {stop.timeSlot || `${9 + index}:00 AM`}
+                    {stop.timeSlot || '—'}
                   </span>
                 </div>
               );
@@ -132,18 +142,22 @@ export const InteractiveMap = ({
               <Navigation className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-blue-700 block">Total Distance</span>
-              <span className="text-xs font-bold text-slate-900">{totalDistance}</span>
+              <span className="text-[10px] uppercase font-bold text-blue-700 block">Straight-line distance</span>
+              <span className="text-xs font-bold text-slate-900" title="Between the stops in order, as the crow flies. Road distance will be longer.">
+                {totalDistance}
+              </span>
             </div>
           </div>
 
           <div className="bg-emerald-50/80 border border-emerald-100 rounded-xl p-3 flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-              <Gauge className="w-4 h-4" />
+              <MapPin className="w-4 h-4" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-emerald-700 block">Est. Travel Time</span>
-              <span className="text-xs font-bold text-slate-900">{estimatedTime}</span>
+              <span className="text-[10px] uppercase font-bold text-emerald-700 block">Stops on map</span>
+              <span className="text-xs font-bold text-slate-900">
+                {validStops.length} of {stops.length}
+              </span>
             </div>
           </div>
         </div>

@@ -20,8 +20,8 @@
 | 2 | Shared contracts (data shape) | 1 | ✅ Done |
 | 3 | MongoDB Atlas + models | 2 | ✅ Done |
 | 4 | JWT Authentication | 3 | ✅ Done |
-| 5 | Trips CRUD + URL by trip id | 4 | ⬜ |
-| 6 | Real Gemini AI | 2, 5 | ⬜ |
+| 5 | Trips CRUD + URL by trip id | 4 | ✅ Done |
+| 6 | Real Gemini AI | 2, 5 | ✅ Done |
 | 7 | Deploy v1 (live URL) + CI | 6 | ⬜ |
 | 8 | Real map: geocoding + road routes | 6 | ⬜ |
 | 9 | Streaming generation + regenerate one day | 6 | ⬜ |
@@ -87,8 +87,8 @@
 - Login abhi demo hai, sab ek hi demo user → **Part 4**
 - ~~`/itinerary` auto-generate, Save duplicate, Edit button~~ → Part 2 mein hi theek ho gaye
 - 2 `react-hooks/exhaustive-deps` warnings (HotelsView, RestaurantsView) → **Part 10** (ye pages wahan rewrite honge)
-- Fake "Landmark 1A" itinerary, purana Gemini SDK → **Part 6**
-- Map distance "98 km" hardcoded → **Part 8**
+- ~~Fake "Landmark 1A" itinerary, purana Gemini SDK~~ → Part 6 mein theek
+- ~~Map distance "98 km" hardcoded~~ → Part 5 mein hataya (abhi straight-line); asli road distance **Part 8**
 
 **Depends on:** — **Affects:** sab parts (base)
 
@@ -137,21 +137,35 @@
 
 **Depends on:** 3 — **Affects:** 5, 10, 15, 17
 
-### Part 5 — Trips CRUD + URL by trip id
-- Routes: `/trips/new` (wizard), `/trips/:id` (itinerary), `/trips/:id/edit`. Refresh pe trip gayab nahi, link bookmark ho sakta hai.
-- Unsaved itinerary refresh pe na khoye (session storage draft).
-- My Trips: title rename inline, sort (date / budget).
-- (Pehle ho chuka: Save = update, Edit prefill + preferences (Part 2/3), phase tabs, ownership (Part 3).)
-- Server: validation, no mass-assignment (sirf allowed fields update), ownership check.
-- **Affects:** 6, 11–16
+### Part 5 — Trips CRUD + URL by trip id ✅
+**Kya kiya**
+- Routes: `/trips/new` (wizard), `/trips/:id` (saved trip), `/trips/:id/edit`, `/itinerary` (naya, abhi save nahi hua). Purana `/create-trip` → `/trips/new`.
+- `/trips/:id` refresh / bookmark / naye tab mein khulta hai (server se load). Galat ya doosre ka id → "Trip not found" page.
+- Unsaved plan refresh pe nahi khota (sessionStorage draft, sirf us tab ke liye, logout pe saaf).
+- Save ke baad page apne-aap `/trips/:id` pe; button "Saved" / "Update Trip". Regenerate ke baad banner: **Save changes / Discard changes** (refresh ke baad bhi).
+- Itinerary page pe Edit button; purani dates wale trip pe Regenerate → pehle nayi dates (server past dates nahi leta).
+- My Trips: title **rename inline** (Enter/Esc), **sort** (newest / start date / budget), View/Edit URLs se.
+- Rename itinerary ka title bhi badalta hai (server).
+- React **ErrorBoundary** har page pe (ek page crash ho to poori app white nahi hoti), naye page pe scroll top, toast har page pe.
+- Fake data hataya: hotel/restaurant pe nakli 4.5★ rating, map pe "98 km / 3.5 hours" (ab stops se nikla straight-line distance), /map page pe "Solang Valley" default.
+- (Pehle ho chuka: Save = update, ownership, allowed-fields-only update, preferences save — Parts 2–4.)
 
-### Part 6 — Real Gemini AI
-- `@google/genai`, model `GEMINI_MODEL` env se, `responseSchema` (Part 2 schema se), Zod validation, 1 retry + timeout.
-- Prompt mein travel pace, stay type, diet, notes ka sahi use; costs "poore group ka total" (Part 2 convention).
-- AI na chale to **honest sample mode** (8 destinations ke curated plans, badge: "Sample plan — AI offline"), "Landmark 1A" jaisa fake data khatam.
-- `AiCache` model: same input → turant result. Per-user daily limit (login ab hai, Part 4). React ErrorBoundary.
-- **Needs from you:** Gemini API key (free, aistudio.google.com).
-- **Affects:** 7, 8, 9, 11, 13
+**Depends on:** 4 — **Affects:** 6, 11–16
+
+### Part 6 — Real Gemini AI ✅
+**Kya kiya** (contract: `docs/CONTRACTS.md` → "AI generation")
+- Naya SDK `@google/genai` (purana `@google/generative-ai` hataya — Google ne uska support band kar diya). Model `GEMINI_MODEL` se.
+- Gemini ko JSON schema (`responseJsonSchema`) + system instruction; jawab `normalizeItinerary` se check, galat ho to **1 retry** reason ke saath; timeout `AI_TIMEOUT_SECONDS`.
+- Prompt mein travel pace (2/3/4 places), stay type, diet (veg/Jain/Halal ...), notes, "costs = poore group ka total".
+- **AiCache** (MongoDB, TTL): same request → turant, free. Regenerate = `?fresh=1` (cache skip).
+- **Daily limit per user** (`AI_DAILY_LIMIT`, `AiUsage` model); Profile + itinerary page pe "x of y AI plans left today".
+- **Offline planner** (fake "Landmark 1A" generator ki jagah): 8 destinations (Manali, Goa, Jaipur, Udaipur, Varanasi, Kerala, Andaman, Rishikesh) ke **asli places** — timings, entry fee, area, veg/non-veg restaurants, travel pace, excursion days. Badge "Offline planner (curated places)".
+- Gemini fail ho (limit, galat key, model band, network) → offline planner + **notice kyun**. Destination offline mein bhi nahi → saaf error (422 / 503 / 429) supported list ke saath.
+- Error messages saaf: galat key, quota, model not found ("GEMINI_MODEL badlo"), network.
+- Tests: Gemini ka **fake client** (bina internet/key): sahi jawab, cache, retry, 2 galat jawab → offline, 429 retry nahi, model 404 hint, daily limit, per-user limit. Offline planner 576 combinations pe check.
+- **Needs from you:** Gemini API key (free): https://aistudio.google.com/apikey → `server/.env` → `GEMINI_API_KEY`.
+
+**Depends on:** 2, 5 — **Affects:** 7, 8, 9, 11, 13
 
 ### Part 7 — Deploy v1 + CI
 - Client → Vercel, Server → Render, DB → Atlas. Production env vars, CORS, cookies (`COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`), `TRUST_PROXY=true`.
@@ -160,7 +174,7 @@
 
 ### Part 8 — Real map
 - Geocoding service (Nominatim, cache in DB, 1 req/sec) → AI ke places ke sahi coordinates.
-- Routing service (OSRM) → har din ka asli road route, distance, time ("98 km" hardcode khatam).
+- Routing service (OSRM) → har din ka asli road route, road distance aur travel time (abhi sirf straight-line distance).
 - Map: `fitBounds`, hotels/restaurants ke pins, card click → map pe focus.
 - **Affects:** 10, 11, 12
 

@@ -3,6 +3,7 @@ import { loginUser, registerUser } from '../services/authService.js';
 import { ensureDemoData } from '../services/demoService.js';
 import { User } from '../models/index.js';
 import { countTrips } from '../services/tripService.js';
+import { aiEnabled, getAiUsage } from '../services/aiService.js';
 import { ApiError } from '../utils/ApiError.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
 import { clearSessionCookie, setSessionCookie, signSession } from '../utils/authToken.js';
@@ -43,7 +44,10 @@ export const authController = {
 
   // GET /api/auth/me  (requireAuth)
   me: asyncHandler(async (req, res) => {
-    const tripCount = await countTrips(req.user.id);
-    res.status(200).json({ success: true, data: { ...req.user, tripCount } });
+    const [tripCount, ai] = await Promise.all([
+      countTrips(req.user.id),
+      aiEnabled() ? getAiUsage(req.user.id) : null,
+    ]);
+    res.status(200).json({ success: true, data: { ...req.user, tripCount, ai } });
   }),
 };

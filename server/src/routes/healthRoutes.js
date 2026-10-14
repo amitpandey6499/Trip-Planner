@@ -2,6 +2,7 @@ import express from 'express';
 import { projectInfo, collegeLabel } from '@tripplanner/shared';
 import { config, serviceStatus } from '../config/env.js';
 import { getDbStatus } from '../config/db.js';
+import { OFFLINE_DESTINATION_NAMES } from '../data/offlineDestinations.js';
 
 const router = express.Router();
 
@@ -17,7 +18,7 @@ router.get('/', (_req, res) => {
     project: `${projectInfo.name} - ${projectInfo.tagline}`,
     college: collegeLabel,
     database: getDbStatus(),
-    services: { ...serviceStatus(), aiModel: config.gemini.model },
+    services: { ...serviceStatus(), aiModel: config.gemini.model, offlineDestinations: OFFLINE_DESTINATION_NAMES },
   });
 });
 
