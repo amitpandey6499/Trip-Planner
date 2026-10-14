@@ -22,6 +22,7 @@ export default defineConfig({
           react: ['react', 'react-dom', 'react-router-dom'],
           map: ['leaflet', 'react-leaflet'],
           icons: ['lucide-react'],
+          zod: ['zod'],
         },
       },
     },

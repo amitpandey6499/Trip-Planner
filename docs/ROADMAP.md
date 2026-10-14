@@ -17,7 +17,7 @@
 | # | Part | Depends on | Status |
 |---|------|-----------|--------|
 | 1 | Foundation & cleanup | — | ✅ Done |
-| 2 | Shared contracts (data shape) | 1 | ⬜ |
+| 2 | Shared contracts (data shape) | 1 | ✅ Done |
 | 3 | MongoDB Atlas + models | 2 | ⬜ |
 | 4 | JWT Authentication | 3 | ⬜ |
 | 5 | Trips CRUD + URL by trip id | 4 | ⬜ |
@@ -85,20 +85,27 @@
 
 **Abhi bhi baaki (jaan-boojh kar, apne part mein theek honge):**
 - Login abhi demo hai, sab ek hi demo user → **Part 4**
-- `/itinerary` seedha kholne pe Manali auto-generate, Save dobara dabane pe duplicate, Edit button → **Part 5**
-- 4 `react-hooks/exhaustive-deps` warnings (ItineraryView, HotelsView, RestaurantsView) → **Part 5 / 10** (ye pages wahan rewrite honge)
+- ~~`/itinerary` auto-generate, Save duplicate, Edit button~~ → Part 2 mein hi theek ho gaye
+- 2 `react-hooks/exhaustive-deps` warnings (HotelsView, RestaurantsView) → **Part 10** (ye pages wahan rewrite honge)
 - Fake "Landmark 1A" itinerary, purana Gemini SDK → **Part 6**
 - Map distance "98 km" hardcoded → **Part 8**
 
 **Depends on:** — **Affects:** sab parts (base)
 
-### Part 2 — Shared contracts
-- `shared/src/schemas/`: `preferences`, `itinerary` (day, activity, hotel, restaurant, budget), `trip`, `auth` — Zod.
-- `shared/src/constants.js`: interests, categories, budget tiers, travel styles, stay types, diets (wizard + server dono yahin se).
-- `shared/src/utils/`: `calcDuration`, `tripStatus(start,end)` (Upcoming/Ongoing/Past), `normalizeBudget` (totals hamesha sahi).
-- Client wizard aur server controller in schemas se validate karenge (NaN budget, end<start khatam).
-- **Done when:** galat input pe dono jagah same error message; tests pass.
-- **Affects:** 3, 5, 6, 12, 13 (sab isi shape pe chalenge)
+### Part 2 — Shared contracts ✅
+**Kya kiya** (details: `docs/CONTRACTS.md`)
+- `shared/src/schemas/`: preferences (wizard ke 3 steps alag), itinerary, trip (save/update), auth — Zod 4.
+- `shared/src/constants.js`: interests, budget tiers, travel pace, stay types, diets, categories, popular destinations, limits.
+- `shared/src/utils/`: dates (`tripPhase`, `calcDuration`, `defaultTripDates`), budget (`computeBudget`, `formatINR`, `suggestBudgetTier`), `tagsToInterests`.
+- `normalizeItinerary`: har itinerary (AI / sample / purana saved) contract follow kare + budget hamesha add up ho.
+- Server: `validateBody(schema)` middleware; generate/save/update shared schemas se. Galat AI output → fallback.
+- Client: wizard har step pe **wahi** messages dikhata hai jo server deta; naye fields (travel pace, stay type, food); travelers stepper; budget khaali kar sakte ho; dates hamesha future se default.
+- Budget display: "Est. ₹X of ₹Y budget", Within / Over budget, cost tab ke parts total se milte hain.
+- My Trips: Upcoming / Ongoing / Past / All tabs dates se (counts ke saath).
+- Part 5 ke kuch kaam pehle hi ho gaye (contract se jude the): `/itinerary` ab random trip nahi banata, Save dobara dabane pe duplicate nahi (Update Trip), Edit wizard ko trip se bharta hai.
+- Tests: shared 25, server 19; browser checks 13 flows.
+
+**Depends on:** 1 — **Affects:** 3, 5, 6, 12, 13
 
 ### Part 3 — MongoDB Atlas + models
 - Atlas free cluster setup guide (aapko account banana hai), `MONGODB_URI` in `.env`.
@@ -118,15 +125,14 @@
 
 ### Part 5 — Trips CRUD + URL by trip id
 - Routes: `/trips/new` (wizard), `/trips/:id` (itinerary), `/trips/:id/edit`. Refresh pe trip gayab nahi.
-- Save ek baar (dobara click = update, duplicate nahi). Edit wizard pehle se bhara hua.
-- My Trips: status dates se auto (Upcoming/Ongoing/Past), loading skeleton, search.
+- Trip ke saath **poore preferences** (interests, pace, diet...) save, taaki Edit mein sab wapas aaye (abhi sirf dates/budget/travelers).
+- (Part 2 mein ho chuka: Save = update, Edit prefill, phase tabs.)
 - Server: validation, no mass-assignment (sirf allowed fields update), ownership check.
 - **Affects:** 6, 11–16
 
 ### Part 6 — Real Gemini AI
 - `@google/genai`, model `GEMINI_MODEL` env se, `responseSchema` (Part 2 schema se), Zod validation, 1 retry + timeout.
-- Budget server pe recompute (din ka total = overall total, travelers ke hisaab se).
-- Wizard mein naye fields: travel style, stay type, diet, pace.
+- Prompt mein travel pace, stay type, diet, notes ka sahi use; costs "poore group ka total" (Part 2 convention).
 - AI na chale to **honest sample mode** (8 destinations ke curated plans, badge: "Sample plan — AI offline"), "Landmark 1A" jaisa fake data khatam.
 - Cache (same input → turant result), per-user daily limit, React ErrorBoundary.
 - **Needs from you:** Gemini API key (free, aistudio.google.com).

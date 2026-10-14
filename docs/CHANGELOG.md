@@ -4,6 +4,52 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Part 2 — Shared contracts (tag `part-2`)
+
+### Chalane ke liye
+```bash
+npm install      # shared mein zod add hua hai
+npm run dev
+npm run check
+```
+Koi naya env variable nahi.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Client aur server ke rules alag-alag (ya the hi nahi) | `shared/` ke Zod schemas — dono jagah **same rule, same message** |
+| Wizard mein galat input pe sirf `alert()` / kuch nahi | har step pe input ke neeche saaf error; galat step pe wapas le jaata hai |
+| Budget field khaali nahi kar sakte the (5000 ban jaata tha) | khaali kar sakte ho; "Budget is required." |
+| Travel pace, stay type, food preference wizard mein the hi nahi | Step 3 mein add; server tak jaate hain |
+| Travelers sirf 1–4 | 1–20 stepper |
+| Default dates `2026-11-12` hardcoded | aaj se 7 din baad (kabhi purani nahi hongi) |
+| Dropdown se "Kerala (Munnar & Alleppey)" → map Jaipur pe | dropdown ka value saaf naam (`Kerala`) bhejta hai |
+| Explore → Plan Trip: interests galat naam ('Forts') | `tagsToInterests` → sahi interests select |
+| Budget numbers add up nahi hote the | `computeBudget`: din ka total = activities ka sum, total = sab buckets ka sum |
+| Header pe user ka budget "(est.)" likh ke dikhata tha | "Est. ₹X of ₹Y budget" + Within / Over budget |
+| My Trips ka "Past" tab hamesha khaali | Upcoming / Ongoing / Past / All dates se calculate |
+| `/itinerary` khulte hi Manali trip ban jaata tha | "No itinerary open" + Create / My Trips buttons |
+| Save dobara dabane pe duplicate trip | pehli baar Save, uske baad **Update Trip** (same trip) |
+| Edit button khaali form kholta tha | trip load hoke wizard bhar jaata hai, "Regenerate" usi trip ko update karta hai |
+| "Share" sirf `/itinerary` URL copy karta tha | "Copy" poora itinerary text copy karta hai (asli share link Part 14 mein) |
+| Tests calendar dates pe the (time ke saath fail hote) | sab dates "aaj se X din" relative |
+
+### Naye files
+- `shared/src/constants.js`, `shared/src/utils/{dates,budget,interests}.js`
+- `shared/src/schemas/{common,preferences,itinerary,trip,auth}.js`, `shared/src/validation.js`, `shared/src/itinerary/normalize.js`
+- `shared/test/{dates,budget,schemas,itinerary}.test.js`
+- `server/src/middleware/validate.js`
+- `client/src/constants/ui.js`
+- `docs/CONTRACTS.md`
+
+### Doosre parts pe asar
+- **Part 3 (MongoDB):** Mongoose models inhi shapes pe banenge; itinerary save se pehle `normalizeItinerary`.
+- **Part 4 (Auth):** `RegisterSchema` / `LoginSchema` ready hain.
+- **Part 6 (AI):** Gemini ka output `normalizeItinerary(..., { expectDays })` se check hota hai; galat ho to fallback.
+- `server/src/utils/numbers.js` hata diya (schemas ne jagah le li).
+
+---
+
 ## Part 1 — Foundation & cleanup (tag `part-1`)
 
 ### Pehli baar chalane ke liye

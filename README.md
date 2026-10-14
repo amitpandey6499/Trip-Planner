@@ -6,7 +6,8 @@ TripPlanner turns travel preferences (destination, dates, budget in ₹, travele
 estimated costs, stays, restaurants and an interactive map.
 
 The project is being rebuilt in 18 parts. See **[docs/ROADMAP.md](docs/ROADMAP.md)** for the plan and status, and
-**[docs/CHANGELOG.md](docs/CHANGELOG.md)** for what changed in each part.
+**[docs/CHANGELOG.md](docs/CHANGELOG.md)** for what changed in each part. Data shapes and validation rules shared by client and
+server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 
 ---
 
@@ -15,7 +16,8 @@ The project is being rebuilt in 18 parts. See **[docs/ROADMAP.md](docs/ROADMAP.m
 | Layer | Technology |
 | --- | --- |
 | Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap |
-| Backend | Node.js, Express 5, Helmet, express-rate-limit, Zod (config validation) |
+| Backend | Node.js, Express 5, Helmet, express-rate-limit |
+| Validation | Zod 4 schemas in `shared/`, used by both client and server |
 | AI | Google Gemini (offline sample generator when no API key is set) |
 | Data | Local JSON store, optional MySQL (MongoDB Atlas arrives in Part 3) |
 | Tooling | npm workspaces, ESLint, Node test runner + Supertest |
@@ -27,7 +29,7 @@ tripplanner/
 ├── package.json          # npm workspaces + root scripts (dev, check, test, lint, build)
 ├── eslint.config.js
 ├── docs/                 # ROADMAP.md, CHANGELOG.md
-├── shared/               # code used by BOTH client and server (project info, later: data schemas)
+├── shared/               # code used by BOTH client and server: schemas, constants, date/budget utils
 ├── server/               # Express API
 │   ├── src/config/env.js # all settings, loaded from server/.env and validated
 │   ├── src/middleware/   # auth seam, error handler, rate limits

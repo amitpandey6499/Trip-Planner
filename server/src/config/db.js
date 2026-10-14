@@ -156,20 +156,24 @@ export const db = {
           userId ? [tripId, userId] : [tripId]
         );
         if (rows.length > 0) {
-          const trip = rows[0];
-          // Get days and activities
-          const [days] = await pool.query(
-            `SELECT * FROM itinerary_days WHERE trip_id = ? ORDER BY day_number ASC`,
-            [tripId]
-          );
-          for (const day of days) {
-            const [acts] = await pool.query(
-              `SELECT * FROM itinerary_activities WHERE day_id = ? ORDER BY order_index ASC`,
-              [day.id]
-            );
-            day.activities = acts;
-          }
-          trip.days = days;
+          const row = rows[0];
+          // Same field names as the JSON store, so callers never see snake_case.
+          const trip = {
+            id: row.id,
+            userId: row.user_id,
+            destination: row.destination,
+            title: row.title,
+            startDate: row.start_date,
+            endDate: row.end_date,
+            durationDays: row.duration_days,
+            travelersCount: row.travelers_count,
+            totalBudget: Number(row.total_budget),
+            budgetCategory: row.budget_category,
+            destinationImage: row.destination_image,
+            createdAt: row.created_at
+          };
+          // Itineraries are kept in the local store in both modes (MySQL tables are replaced in Part 3).
+          trip.itinerary = getStore().itineraries[tripId] || null;
           return trip;
         }
       } catch (err) {
@@ -280,9 +284,18 @@ export const db = {
       try {
         const fields = [];
         const values = [];
-        if (updateData.title) { fields.push('title = ?'); values.push(updateData.title); }
-        if (updateData.status) { fields.push('status = ?'); values.push(updateData.status); }
-        if (updateData.totalBudget) { fields.push('total_budget = ?'); values.push(updateData.totalBudget); }
+        const columns = {
+          title: 'title',
+          startDate: 'start_date',
+          endDate: 'end_date',
+          durationDays: 'duration_days',
+          travelersCount: 'travelers_count',
+          totalBudget: 'total_budget',
+          budgetCategory: 'budget_category'
+        };
+        for (const [key, column] of Object.entries(columns)) {
+          if (updateData[key] !== undefined) { fields.push(`${column} = ?`); values.push(updateData[key]); }
+        }
 
         if (fields.length > 0) {
           values.push(tripId, trip.userId);

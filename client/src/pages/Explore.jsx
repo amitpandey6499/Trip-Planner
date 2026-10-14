@@ -3,18 +3,9 @@ import { Search, X, MapPin, ArrowRight } from 'lucide-react';
 import { tripApi } from '../services/api';
 import DestinationCard from '../components/DestinationCard';
 import { useNavigate } from 'react-router-dom';
+import { DESTINATION_CATEGORIES, formatINR, tagsToInterests } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
 
-const categories = [
-  'All',
-  'Popular',
-  'Beaches',
-  'Mountains',
-  'Cultural',
-  'Adventure',
-  'Spiritual',
-  'Hidden Gems'
-];
 
 export const Explore = () => {
   const navigate = useNavigate();
@@ -49,7 +40,7 @@ export const Explore = () => {
     setCurrentPreferences(prev => ({
       ...prev,
       destination: dest.name,
-      interests: dest.tags || ['Nature & Outdoors']
+      interests: tagsToInterests(dest.tags)
     }));
     setSelectedDestModal(null);
     navigate('/create-trip');
@@ -96,7 +87,7 @@ export const Explore = () => {
 
         {/* Category Pills Filter (matching Screen 4) */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-          {categories.map((cat) => {
+          {DESTINATION_CATEGORIES.map((cat) => {
             const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase();
             return (
               <button
@@ -188,7 +179,7 @@ export const Explore = () => {
                 </div>
                 <div>
                   <span className="text-[10px] text-slate-400 uppercase font-semibold block">Avg. Daily Budget</span>
-                  <span className="font-bold text-blue-600">₹{selectedDestModal.averageBudgetPerDay || 3200}/day</span>
+                  <span className="font-bold text-blue-600">{formatINR(selectedDestModal.averageBudgetPerDay || 3200)}/day</span>
                 </div>
               </div>
 

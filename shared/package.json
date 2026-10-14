@@ -10,5 +10,8 @@
   },
   "scripts": {
     "test": "node --test"
+  },
+  "dependencies": {
+    "zod": "^4.1.0"
   }
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, Heart, MapPin, ArrowRight, Eye } from 'lucide-react';
+import { tagsToInterests } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
 
 export const DestinationCard = ({ destination, onQuickView }) => {
@@ -12,7 +13,8 @@ export const DestinationCard = ({ destination, onQuickView }) => {
     setCurrentPreferences(prev => ({
       ...prev,
       destination: destination.name,
-      interests: destination.tags || ['Nature & Outdoors']
+      // destination tags ('Forts', 'Mountains') → wizard interests ('History & Culture', ...)
+      interests: tagsToInterests(destination.tags)
     }));
     navigate('/create-trip');
   };

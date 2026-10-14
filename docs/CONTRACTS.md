@@ -1,0 +1,41 @@
+# Data contracts (Part 2)
+
+Client aur server **ek hi** definition use karte hain: `shared/src/`. Shape badalni ho to pehle yahan badlo,
+phir `npm run check` batayega kaun si jagah toot rahi hai.
+
+```js
+import { TripPreferencesSchema, normalizeItinerary, formatINR, tripPhase } from '@tripplanner/shared';
+```
+
+## Conventions
+| Cheez | Rule |
+| --- | --- |
+| Date | `'YYYY-MM-DD'` string (calendar date, no time). Maths UTC mein (`utils/dates.js`), isliye time-zone se din shift nahi hota. |
+| Money | Whole rupees (INR), **poore group ka total** (per person nahi). `formatINR(150000)` → `₹1,50,000`. |
+| Trip phase | `Upcoming / Ongoing / Past` — dates se **calculate** hota hai (`tripPhase`), DB mein store nahi hota. |
+| Errors | `{ success: false, error: 'pehla message', details: { field, fields: { name: message } } }` + sahi HTTP status. |
+| Itinerary source | `gemini` / `sample` / `offline` → UI badge `ITINERARY_SOURCES` se. |
+
+## Schemas (`shared/src/schemas/`)
+| Schema | Kahan use hota hai |
+| --- | --- |
+| `TripPreferencesSchema` | Wizard + Quick search (client), `POST /api/trips/generate` (server). Output mein `durationDays` aur `endDate` hamesha hote hain. |
+| `WhereWhenSchema`, `WhoBudgetSchema`, `StyleSchema` | Wizard step 1/2/3 alag-alag validate (`validatePreferenceStep`). |
+| `ItinerarySchema` | AI / sample output, saved itinerary, client rendering. Details mein tolerant (galat cost → 0, galat URL hata do), structure mein strict. |
+| `SaveTripSchema` | `POST /api/trips` → `{ tripData, itinerary }` |
+| `UpdateTripSchema` | `PUT /api/trips/:id` — sirf title, dates, travelers, budget, budgetCategory. Baaki fields ignore. |
+| `RegisterSchema`, `LoginSchema` | Part 4 (JWT login) ke liye pehle se tay. |
+
+## Budget hamesha kaise add up hota hai (`computeBudget`)
+1. Har activity ka `cost` uske category bucket mein jaata hai: Restaurant → food, Transit → transport, Attraction/Activity/Shopping → activities.
+2. Din ka `estimatedDailyExpense` = us din ki activities ka sum.
+3. `accommodation` = di gayi stay cost, warna `pehle hotel ka price × nights × rooms` (2 log per room).
+4. `totalEstimated` = chaaron buckets ka sum = accommodation + saare dino ka sum.
+5. `withinBudget` = estimate ≤ user ka budget.
+
+`normalizeItinerary(raw, preferences)` ye sab karta hai, dino ko 1..N number aur dates deta hai, ids lagata hai.
+Ise do baar chalao to result same rehta hai (save karte waqt server dobara chalata hai).
+
+## Future fields (optional, abhi khaali)
+`originCity`, `language` (preferences) · `routes` (Part 8) · `weather`, `packingList`, `transportOptions` (Part 11).
+Optional hain, isliye purane saved trips kabhi invalid nahi honge.

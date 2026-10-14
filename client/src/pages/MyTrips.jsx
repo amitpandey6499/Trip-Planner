@@ -13,26 +13,44 @@ import {
   AlertTriangle,
   Loader2
 } from 'lucide-react';
+import { formatDate, formatINR, tripPhase } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
+
+const TABS = ['Upcoming', 'Ongoing', 'Past', 'All'];
+const PHASE_STYLES = {
+  Upcoming: 'bg-blue-50 text-blue-700 border-blue-200/60',
+  Ongoing: 'bg-emerald-50 text-emerald-700 border-emerald-200/60',
+  Past: 'bg-slate-100 text-slate-600 border-slate-200',
+};
 
 export const MyTrips = () => {
   const navigate = useNavigate();
-  const { savedTrips, deleteTrip, loadTripById, loading } = useTrip();
+  const { savedTrips, deleteTrip, loadTripById, tripsLoading } = useTrip();
 
-  const [activeTab, setActiveTab] = useState('Upcoming'); // 'Upcoming' | 'Past' | 'Saved'
+  const [activeTab, setActiveTab] = useState('Upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [tripToDelete, setTripToDelete] = useState(null);
 
-  const filteredTrips = savedTrips.filter(trip => {
-    const matchesTab = activeTab === 'Saved' ? true : (trip.status || 'Upcoming').toLowerCase() === activeTab.toLowerCase();
-    const matchesSearch = trip.destination.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          trip.title.toLowerCase().includes(searchQuery.toLowerCase());
+  // Phase is calculated from the dates (shared tripPhase), so "Past" fills itself.
+  const trips = savedTrips.map((trip) => ({ ...trip, phase: tripPhase(trip.startDate, trip.endDate) }));
+  const query = searchQuery.trim().toLowerCase();
+  const filteredTrips = trips.filter((trip) => {
+    const matchesTab = activeTab === 'All' || trip.phase === activeTab;
+    const matchesSearch =
+      !query || (trip.destination ?? '').toLowerCase().includes(query) || (trip.title ?? '').toLowerCase().includes(query);
     return matchesTab && matchesSearch;
   });
+  const countFor = (tab) => (tab === 'All' ? trips.length : trips.filter((t) => t.phase === tab).length);
 
   const handleView = async (tripId) => {
-    await loadTripById(tripId);
-    navigate('/itinerary');
+    const trip = await loadTripById(tripId);
+    if (trip) navigate('/itinerary');
+  };
+
+  // Wait for the trip to load (it refills the wizard), then open the wizard in edit mode.
+  const handleEdit = async (tripId) => {
+    const trip = await loadTripById(tripId);
+    if (trip) navigate('/create-trip', { state: { editTripId: tripId } });
   };
 
   const confirmDelete = async () => {
@@ -71,7 +89,7 @@ export const MyTrips = () => {
           
           {/* Tabs */}
           <div className="flex items-center gap-1.5 bg-white p-1 rounded-xl border border-slate-200/80 shadow-2xs self-start">
-            {['Upcoming', 'Past', 'Saved'].map((tab) => (
+            {TABS.map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
@@ -81,7 +99,7 @@ export const MyTrips = () => {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                {tab}
+                {tab} <span className="opacity-70">({countFor(tab)})</span>
               </button>
             ))}
           </div>
@@ -101,7 +119,7 @@ export const MyTrips = () => {
         </div>
 
         {/* Trips List / Grid */}
-        {loading && savedTrips.length === 0 ? (
+        {tripsLoading && savedTrips.length === 0 ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
             <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> Loading your trips...
           </div>
@@ -124,12 +142,12 @@ export const MyTrips = () => {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200/60 uppercase tracking-wide">
-                        {trip.status || 'Upcoming'}
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wide ${PHASE_STYLES[trip.phase]}`}>
+                        {trip.phase}
                       </span>
-                      <span className="text-xs text-slate-400">
-                        Created {new Date(trip.createdAt || Date.now()).toLocaleDateString()}
-                      </span>
+                      {trip.createdAt && (
+                        <span className="text-xs text-slate-400">Created {new Date(trip.createdAt).toLocaleDateString('en-IN')}</span>
+                      )}
                     </div>
 
                     <h3 className="text-base sm:text-lg font-bold text-slate-900">
@@ -139,22 +157,22 @@ export const MyTrips = () => {
                     <div className="flex flex-wrap items-center gap-3 text-xs text-slate-500">
                       <span className="flex items-center gap-1">
                         <Calendar className="w-3.5 h-3.5 text-slate-400" />
-                        {trip.startDate} {trip.endDate ? `– ${trip.endDate}` : ''}
+                        {formatDate(trip.startDate)} {trip.endDate ? `– ${formatDate(trip.endDate)}` : ''}
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        {trip.durationDays || 4} Days
+                        {trip.durationDays} {trip.durationDays === 1 ? 'Day' : 'Days'}
                       </span>
                       <span>•</span>
                       <span className="flex items-center gap-1">
                         <Users className="w-3.5 h-3.5 text-slate-400" />
-                        {trip.travelersCount || 2} Travelers
+                        {trip.travelersCount} {trip.travelersCount === 1 ? 'Traveler' : 'Travelers'}
                       </span>
                     </div>
 
                     <p className="text-xs font-semibold text-blue-600">
-                      Est. Budget: ₹{(trip.totalBudget || 15000).toLocaleString()}
+                      Budget: {formatINR(trip.totalBudget)}
                     </p>
                   </div>
                 </div>
@@ -170,10 +188,7 @@ export const MyTrips = () => {
                   </button>
 
                   <button
-                    onClick={() => {
-                      loadTripById(trip.id);
-                      navigate('/create-trip');
-                    }}
+                    onClick={() => handleEdit(trip.id)}
                     className="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1"
                     title="Edit trip parameters"
                   >
@@ -195,7 +210,7 @@ export const MyTrips = () => {
         ) : (
           <div className="bg-white rounded-3xl p-12 text-center max-w-md mx-auto border border-slate-100 shadow-soft space-y-4">
             <Sparkles className="w-12 h-12 text-blue-400 mx-auto" />
-            <h3 className="text-lg font-bold text-slate-800">No {activeTab} Trips Found</h3>
+            <h3 className="text-lg font-bold text-slate-800">No {activeTab === 'All' ? '' : `${activeTab.toLowerCase()} `}trips found</h3>
             <p className="text-xs text-slate-500">
               Start planning your next getaway with the AI itinerary generator.
             </p>

@@ -1,5 +1,6 @@
 {
   "manali": {
+    "source": "sample",
     "destination": "Manali",
     "title": "4-Day Himalayan Escape to Manali",
     "durationDays": 4,
@@ -384,7 +385,7 @@
       }
     ],
     "budgetBreakdown": {
-      "accommodation": 6800,
+      "accommodation": 6750,
       "activitiesAndSightseeing": 3600,
       "foodAndDining": 2800,
       "localTransport": 1800,

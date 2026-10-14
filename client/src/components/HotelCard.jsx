@@ -1,4 +1,5 @@
 import { Star, MapPin } from 'lucide-react';
+import { formatINR } from '@tripplanner/shared';
 
 export const HotelCard = ({ hotel, onSelectOnMap }) => {
   return (
@@ -59,7 +60,7 @@ export const HotelCard = ({ hotel, onSelectOnMap }) => {
           <div>
             <span className="text-[10px] uppercase font-semibold text-slate-400 block">Estimated Rate</span>
             <span className="text-base font-extrabold text-blue-600">
-              ₹{(hotel.pricePerNight || 3500).toLocaleString()}
+              {hotel.pricePerNight ? formatINR(hotel.pricePerNight) : '—'}
               <span className="text-xs font-medium text-slate-500">/night</span>
             </span>
           </div>

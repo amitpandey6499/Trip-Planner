@@ -1,4 +1,5 @@
 import { Clock, MapPin, IndianRupee, Lightbulb, Compass } from 'lucide-react';
+import { formatDate, formatINR } from '@tripplanner/shared';
 
 export const DayTimeline = ({ day }) => {
   if (!day || !day.activities) {
@@ -15,15 +16,20 @@ export const DayTimeline = ({ day }) => {
       <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-soft">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-4">
           <div>
+            {day.date && (
+              <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
+                Day {day.dayNumber} • {formatDate(day.date)}
+              </p>
+            )}
             <h2 className="text-xl sm:text-2xl font-bold text-slate-900">
               {day.title}
             </h2>
             <p className="text-sm text-slate-500 mt-1">{day.description}</p>
           </div>
-          {day.estimatedDailyExpense && (
+          {day.estimatedDailyExpense > 0 && (
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold self-start sm:self-auto border border-blue-100">
               <IndianRupee className="w-3.5 h-3.5" />
-              <span>Est. Daily Cost: ₹{day.estimatedDailyExpense.toLocaleString()}</span>
+              <span>Est. Daily Cost: {formatINR(day.estimatedDailyExpense)}</span>
             </div>
           )}
         </div>
@@ -65,7 +71,7 @@ export const DayTimeline = ({ day }) => {
 
                     {activity.cost > 0 && (
                       <span className="text-xs font-semibold text-slate-700 bg-slate-200/70 px-2 py-0.5 rounded-md">
-                        ₹{activity.cost} est.
+                        {formatINR(activity.cost)} est.
                       </span>
                     )}
                   </div>

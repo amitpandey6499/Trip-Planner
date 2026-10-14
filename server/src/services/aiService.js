@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { normalizeItinerary } from '@tripplanner/shared';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -156,7 +157,7 @@ REQUIREMENTS:
   const result = await model.generateContent(prompt);
   const text = result.response.text();
   const parsed = JSON.parse(text);
-  parsed.source = 'Google Gemini AI (Live)';
+  parsed.source = 'gemini';
   return parsed;
 };
 
@@ -173,7 +174,7 @@ const generateFallbackItinerary = (preferences) => {
     const copy = JSON.parse(JSON.stringify(samples[destKey]));
     copy.travelersCount = preferences.travelersCount || 2;
     copy.totalBudget = preferences.totalBudget || copy.totalBudget;
-    copy.source = 'TripPlanner Engine (Offline Demo Mode)';
+    copy.source = 'sample';
     return copy;
   }
 
@@ -268,7 +269,7 @@ const generateFallbackItinerary = (preferences) => {
     budgetCategory: preferences.budgetCategory || 'Moderate',
     currency: 'INR',
     destinationImage: asset.image,
-    source: 'TripPlanner AI Engine (Demo Mode)',
+    source: 'offline',
     budgetBreakdown: {
       accommodation: accommodationCost,
       activitiesAndSightseeing: activitiesCost,
@@ -338,16 +339,26 @@ const generateFallbackItinerary = (preferences) => {
 /**
  * Main service method
  */
+/**
+ * Main entry point. Always returns an itinerary that follows the shared contract
+ * (normalizeItinerary): right number of days, dated days, budget that adds up.
+ *
+ * Order: Gemini (if a key is set) → curated sample → offline generator.
+ * A Gemini answer that breaks the contract is rejected and the fallback is used.
+ */
 export const generateItinerary = async (preferences) => {
-  try {
-    if (config.gemini.apiKey) {
+  const expectDays = preferences.durationDays;
+
+  if (config.gemini.apiKey) {
+    try {
       console.log(`[AI] Generating itinerary with ${config.gemini.model} for ${preferences.destination}...`);
-      return await generateWithGemini(preferences);
+      const raw = await generateWithGemini(preferences);
+      return normalizeItinerary(raw, preferences, { expectDays });
+    } catch (err) {
+      console.warn(`[AI] Gemini result not usable (${err.message}). Using the offline generator instead.`);
     }
-  } catch (err) {
-    console.warn(`[AI] Gemini generation encountered issue: ${err.message}. Falling back to Smart Engine.`);
   }
 
-  if (!config.isTest) console.log(`[AI] Using offline sample generator for ${preferences.destination}.`);
-  return generateFallbackItinerary(preferences);
+  if (!config.isTest) console.log(`[AI] Using offline generator for ${preferences.destination}.`);
+  return normalizeItinerary(generateFallbackItinerary(preferences), preferences, { expectDays });
 };
