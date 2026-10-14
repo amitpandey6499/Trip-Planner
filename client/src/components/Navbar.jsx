@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Compass, Sparkles, MapPin, Calendar, User, LogOut, Menu, X, BookmarkCheck } from 'lucide-react';
+import { Compass, Sparkles, User, LogOut, Menu, X, BookmarkCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 export const Navbar = () => {

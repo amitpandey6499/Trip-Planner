@@ -1,5 +1,4 @@
-import React from 'react';
-import { IndianRupee, Bed, Compass, Utensils, Car, PieChart, ShieldAlert } from 'lucide-react';
+import { IndianRupee, Bed, Compass, Utensils, Car, ShieldAlert } from 'lucide-react';
 
 export const CostBreakdown = ({ breakdown, totalBudget = 15000, durationDays = 4 }) => {
   if (!breakdown) {

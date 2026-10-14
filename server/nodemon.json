@@ -1,0 +1,6 @@
+{
+  "watch": ["src", "../shared/src"],
+  "ext": "js,json",
+  "ignore": ["data/*", "src/data/tripsStore.json", "test/*"],
+  "delay": 300
+}

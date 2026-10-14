@@ -1,5 +1,4 @@
-import React from 'react';
-import { Star, MapPin, Wifi, Coffee, Mountain, ExternalLink } from 'lucide-react';
+import { Star, MapPin } from 'lucide-react';
 
 export const HotelCard = ({ hotel, onSelectOnMap }) => {
   return (

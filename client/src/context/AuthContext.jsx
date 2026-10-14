@@ -1,14 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
+
+// TEMPORARY (Parts 1-3): browser-only demo session.
+// Part 4 replaces this file with real JWT login (register / login / logout / me).
+// Pages only use: user, isSignedIn, loading, login, logout.
 
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-
-  // Check if Clerk is configured in environment
-  const clerkPubKey = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
-  const isClerkActive = !!(clerkPubKey && clerkPubKey.startsWith('pk_'));
 
   useEffect(() => {
     // Check saved local user session
@@ -35,7 +35,7 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  const login = (email, password) => {
+  const login = (email, _password) => {
     const newUser = {
       id: `user_${Date.now()}`,
       name: email.split('@')[0].replace('.', ' ').replace(/^./, str => str.toUpperCase()),
@@ -74,7 +74,6 @@ export const AuthProvider = ({ children }) => {
       value={{
         user,
         isSignedIn: !!user,
-        isClerkActive,
         loading,
         login,
         loginWithGoogle,

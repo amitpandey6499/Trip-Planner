@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import {
   Calendar,
   Users,
@@ -8,7 +7,6 @@ import {
   Share2,
   Printer,
   RefreshCw,
-  MapPin,
   Clock,
   Sparkles,
   Bed,
@@ -28,7 +26,6 @@ import RestaurantCard from '../components/RestaurantCard';
 import CostBreakdown from '../components/CostBreakdown';
 
 export const ItineraryView = () => {
-  const navigate = useNavigate();
   const {
     currentItinerary,
     currentPreferences,

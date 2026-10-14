@@ -1,7 +1,8 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config } from '../config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -59,15 +60,15 @@ const destinationAssets = {
  * Generate Itinerary via Google Gemini API
  */
 const generateWithGemini = async (preferences) => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey || apiKey === 'your_gemini_api_key') {
+  const { apiKey, model: modelName } = config.gemini;
+  if (!apiKey) {
     throw new Error('GEMINI_API_KEY not configured');
   }
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  // Support gemini-1.5-flash or gemini-2.0-flash
+  // Model name comes from GEMINI_MODEL in server/.env (Part 6 moves this to the new @google/genai SDK).
   const model = genAI.getGenerativeModel({
-    model: 'gemini-1.5-flash',
+    model: modelName,
     generationConfig: {
       responseMimeType: 'application/json',
       temperature: 0.7
@@ -339,14 +340,14 @@ const generateFallbackItinerary = (preferences) => {
  */
 export const generateItinerary = async (preferences) => {
   try {
-    if (process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY !== 'your_gemini_api_key') {
-      console.log(`[AI] Generating itinerary using Google Gemini AI for ${preferences.destination}...`);
+    if (config.gemini.apiKey) {
+      console.log(`[AI] Generating itinerary with ${config.gemini.model} for ${preferences.destination}...`);
       return await generateWithGemini(preferences);
     }
   } catch (err) {
     console.warn(`[AI] Gemini generation encountered issue: ${err.message}. Falling back to Smart Engine.`);
   }
 
-  console.log(`[AI] Generating high-fidelity customized itinerary for ${preferences.destination}...`);
+  if (!config.isTest) console.log(`[AI] Using offline sample generator for ${preferences.destination}.`);
   return generateFallbackItinerary(preferences);
 };

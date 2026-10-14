@@ -1,7 +1,6 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useTrip } from '../context/TripContext';
 import InteractiveMap from '../components/InteractiveMap';
-import { ChevronRight, Calendar, Compass } from 'lucide-react';
 
 export const MapView = () => {
   const { currentItinerary } = useTrip();

@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrip } from '../context/TripContext';
 import { tripApi } from '../services/api';
 import HotelCard from '../components/HotelCard';
-import { Map, Bed, Filter, Search } from 'lucide-react';
+import { Map, Loader2 } from 'lucide-react';
 
 export const HotelsView = () => {
   const navigate = useNavigate();
@@ -79,6 +79,12 @@ export const HotelsView = () => {
             </button>
           ))}
         </div>
+
+        {loading && (
+          <p className="flex items-center gap-2 text-xs text-slate-500">
+            <Loader2 className="w-4 h-4 animate-spin text-blue-600" /> Loading hotels...
+          </p>
+        )}
 
         {/* Hotels Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

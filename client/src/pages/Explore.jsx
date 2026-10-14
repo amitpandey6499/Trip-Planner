@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Search, Filter, Sparkles, X, MapPin, Calendar, IndianRupee, ArrowRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Search, X, MapPin, ArrowRight } from 'lucide-react';
 import { tripApi } from '../services/api';
 import DestinationCard from '../components/DestinationCard';
 import { useNavigate } from 'react-router-dom';

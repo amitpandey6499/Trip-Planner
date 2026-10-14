@@ -1,17 +1,23 @@
 import express from 'express';
+import { projectInfo, collegeLabel } from '@tripplanner/shared';
+import { config, serviceStatus } from '../config/env.js';
 import { getDbStatus } from '../config/db.js';
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
+/** Real status of the server and its integrations (used by the Profile page). */
+router.get('/', (_req, res) => {
   res.status(200).json({
+    success: true,
     status: 'healthy',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
+    uptimeSeconds: Math.round(process.uptime()),
+    environment: config.env,
+    version: projectInfo.version,
+    project: `${projectInfo.name} - ${projectInfo.tagline}`,
+    college: collegeLabel,
     database: getDbStatus(),
-    version: '1.0.0',
-    college: 'ABES Institute of Technology (ABESIT), Ghaziabad',
-    project: 'TripPlanner — AI-Powered Smart Trip Planner'
+    services: { ...serviceStatus(), aiModel: config.gemini.model },
   });
 });
 

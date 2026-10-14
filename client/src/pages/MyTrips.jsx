@@ -1,19 +1,17 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Plus,
   Calendar,
   Users,
-  IndianRupee,
-  MapPin,
   Trash2,
   Edit3,
   ArrowRight,
   Search,
-  CheckCircle2,
   Clock,
   Sparkles,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { useTrip } from '../context/TripContext';
 
@@ -103,7 +101,11 @@ export const MyTrips = () => {
         </div>
 
         {/* Trips List / Grid */}
-        {filteredTrips.length > 0 ? (
+        {loading && savedTrips.length === 0 ? (
+          <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" /> Loading your trips...
+          </div>
+        ) : filteredTrips.length > 0 ? (
           <div className="space-y-4">
             {filteredTrips.map((trip) => (
               <div

@@ -1,7 +1,5 @@
 # Node modules
 node_modules/
-client/node_modules/
-server/node_modules/
 
 # Environment files
 .env
@@ -22,3 +20,10 @@ yarn-error.log*
 # OS files
 .DS_Store
 Thumbs.db
+
+# Runtime data written by the server
+server/data/
+
+# Editor
+.vscode/
+.idea/

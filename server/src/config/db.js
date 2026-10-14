@@ -1,11 +1,16 @@
+/**
+ * Storage layer (temporary until Part 3 moves everything to MongoDB Atlas).
+ * - MySQL is used when it is reachable (and MYSQL_ENABLED is not "false").
+ * - Otherwise trips are kept in a local JSON file (server/data/tripsStore.json).
+ */
 import mysql from 'mysql2/promise';
-import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { config } from './env.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const storeFilePath = path.join(__dirname, '../data/tripsStore.json');
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const storeFilePath = config.storeFile;
 
 let pool = null;
 let isMySqlConnected = false;
@@ -80,15 +85,22 @@ const saveStore = (data) => {
 export const initDB = async () => {
   initStoreFile();
 
+  if (!config.mysql.enabled) {
+    console.log(`[DB] MySQL disabled (MYSQL_ENABLED=false). Using local store: ${storeFilePath}`);
+    return { isMySqlConnected };
+  }
+
   const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_NAME || 'tripplanner_db',
-    port: parseInt(process.env.DB_PORT || '3306', 10),
+    host: config.mysql.host,
+    user: config.mysql.user,
+    password: config.mysql.password,
+    database: config.mysql.database,
+    port: config.mysql.port,
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0
+    queueLimit: 0,
+    connectTimeout: 5000,
+    dateStrings: true // return DATE columns as 'YYYY-MM-DD' (no timezone shift)
   };
 
   try {
@@ -100,9 +112,9 @@ export const initDB = async () => {
     console.log(`[DB] MySQL database connected successfully to ${dbConfig.database}@${dbConfig.host}`);
   } catch (err) {
     isMySqlConnected = false;
-    console.warn(`[DB] MySQL connection notice: ${err.message}.`);
-    console.log(`[DB] Operating with Persistent JSON Store fallback at: ${storeFilePath}`);
-    console.log(`[DB] All trips, user data, and itineraries will persist cleanly.`);
+    if (pool) pool.end().catch(() => {});
+    pool = null;
+    console.log(`[DB] MySQL not reachable (${err.code || err.message}). Using local store: ${storeFilePath}`);
   }
 
   return { isMySqlConnected };
@@ -133,7 +145,7 @@ export const db = {
       }
     }
     const store = getStore();
-    return store.trips.filter(t => t.userId === userId || userId === 'all');
+    return store.trips.filter(t => t.userId === userId);
   },
 
   async getTripById(tripId, userId = null) {
@@ -165,7 +177,7 @@ export const db = {
       }
     }
     const store = getStore();
-    const trip = store.trips.find(t => t.id === tripId);
+    const trip = store.trips.find(t => t.id === tripId && (!userId || t.userId === userId));
     if (!trip) return null;
     const itinerary = store.itineraries[tripId] || null;
     return { ...trip, itinerary };
@@ -238,6 +250,8 @@ export const db = {
     const store = getStore();
     const initialLen = store.trips.length;
     store.trips = store.trips.filter(t => t.id !== tripId || (userId && t.userId !== userId));
+    const removed = store.trips.length < initialLen;
+    if (!removed) return false; // not found or not the owner: touch nothing
     delete store.itineraries[tripId];
     saveStore(store);
 
@@ -251,7 +265,7 @@ export const db = {
       }
     }
 
-    return store.trips.length < initialLen;
+    return true;
   },
 
   async updateTrip(tripId, updateData, userId = null) {
@@ -271,8 +285,8 @@ export const db = {
         if (updateData.totalBudget) { fields.push('total_budget = ?'); values.push(updateData.totalBudget); }
 
         if (fields.length > 0) {
-          values.push(tripId);
-          await pool.query(`UPDATE trips SET ${fields.join(', ')} WHERE id = ?`, values);
+          values.push(tripId, trip.userId);
+          await pool.query(`UPDATE trips SET ${fields.join(', ')} WHERE id = ? AND user_id = ?`, values);
         }
       } catch (err) {
         console.error('MySQL update error:', err.message);

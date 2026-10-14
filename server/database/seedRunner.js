@@ -1,10 +1,8 @@
-import dotenv from 'dotenv';
-dotenv.config();
-
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import mysql from 'mysql2/promise';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
+import { config } from '../src/config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -15,10 +13,10 @@ async function runSeed() {
   const seedPath = path.join(__dirname, 'seed.sql');
 
   const dbConfig = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || '',
-    port: parseInt(process.env.DB_PORT || '3306', 10),
+    host: config.mysql.host,
+    user: config.mysql.user,
+    password: config.mysql.password,
+    port: config.mysql.port,
     multipleStatements: true
   };
 

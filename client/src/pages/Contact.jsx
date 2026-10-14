@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Mail, MapPin, Phone, Send, CheckCircle2 } from 'lucide-react';
+import { useState } from 'react';
+import { MapPin, Send, CheckCircle2, GraduationCap, Users } from 'lucide-react';
+import { projectInfo } from '@tripplanner/shared';
 
 export const Contact = () => {
   const [submitted, setSubmitted] = useState(false);
@@ -41,25 +42,35 @@ export const Contact = () => {
               <div className="flex items-start gap-3">
                 <MapPin className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <p>
-                  ABES Institute of Technology (ABESIT)<br />
-                  19th KM Stone, NH-09, Vijay Nagar Ghaziabad, Uttar Pradesh 201009
+                  {projectInfo.college.name}
+                  <br />
+                  {projectInfo.college.address}
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <p>support@tripplanner.abesit.in</p>
+              <div className="flex items-start gap-3">
+                <GraduationCap className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <p>
+                  {projectInfo.college.university}
+                  <br />
+                  Academic Session {projectInfo.academicSession}
+                </p>
               </div>
 
-              <div className="flex items-center gap-3">
-                <Phone className="w-5 h-5 text-blue-400 flex-shrink-0" />
-                <p>Academic Session 2026–27</p>
+              <div className="flex items-start gap-3">
+                <Users className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+                <p>
+                  {projectInfo.team.map((member) => (
+                    <span key={member.rollNo || member.name} className="block">
+                      {member.name}
+                      {member.rollNo ? ` (${member.rollNo})` : ''}
+                    </span>
+                  ))}
+                </p>
               </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400">
-              Department of Computer Science & Engineering
-            </div>
+            <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400">{projectInfo.college.department}</div>
           </div>
 
           {/* Form */}

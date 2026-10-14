@@ -1,11 +1,43 @@
-export const errorHandler = (err, req, res, next) => {
-  console.error('[Error]', err.stack || err.message || err);
+import { config } from '../config/env.js';
+import { ApiError } from '../utils/ApiError.js';
 
-  const statusCode = err.statusCode || res.statusCode !== 200 ? res.statusCode : 500;
-  
-  res.status(statusCode).json({
+/** Any request that reached here matched no route. */
+export const notFound = (req, _res, next) => {
+  next(ApiError.notFound(`Cannot find endpoint ${req.method} ${req.originalUrl}`));
+};
+
+/**
+ * Global error handler. Every error ends up here and leaves as:
+ *   { success: false, error: "message", details?: ... }
+ */
+// Express needs all 4 arguments to treat this function as an error handler.
+export const errorHandler = (err, req, res, _next) => {
+  let status = Number(err.statusCode ?? err.status) || 500;
+  let message = err.message || 'Internal Server Error';
+
+  // Errors thrown by express.json()
+  if (err.type === 'entity.parse.failed') {
+    status = 400;
+    message = 'Request body is not valid JSON.';
+  } else if (err.type === 'entity.too.large') {
+    status = 413;
+    message = 'Request body is too large.';
+  }
+
+  if (status < 400 || status > 599) status = 500;
+
+  if (status >= 500) {
+    console.error(`[Error] ${req.method} ${req.originalUrl}`, err);
+    // Never leak internal details to users in production.
+    if (config.isProd) message = 'Something went wrong on our side. Please try again.';
+  } else if (config.isDev) {
+    console.warn(`[${status}] ${req.method} ${req.originalUrl} - ${message}`);
+  }
+
+  res.status(status).json({
     success: false,
-    error: err.message || 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
+    error: message,
+    ...(err.details !== undefined && status < 500 && { details: err.details }),
+    ...(config.isDev && status >= 500 && { stack: err.stack }),
   });
 };

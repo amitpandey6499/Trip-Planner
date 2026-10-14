@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MapPin,
-  Calendar,
   Users,
   IndianRupee,
   Sparkles,
@@ -21,7 +20,6 @@ import {
   Camera,
   Flame,
   Gem,
-  CheckCircle2,
   Loader2
 } from 'lucide-react';
 import { useTrip } from '../context/TripContext';
@@ -122,8 +120,8 @@ export const CreateTrip = () => {
     try {
       await generateTrip(cleaned);
       navigate('/itinerary');
-    } catch (err) {
-      console.error('Trip generation error:', err);
+    } catch {
+      // The error message is already shown above the form (TripContext sets `error`).
     }
   };
 

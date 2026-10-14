@@ -1,19 +1,13 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
   ArrowRight,
-  Compass,
-  MapPin,
-  Calendar,
-  ShieldCheck,
   CreditCard,
   UtensilsCrossed,
   Map,
-  Gem,
-  CheckCircle2,
-  Users
+  Gem
 } from 'lucide-react';
+import { projectInfo } from '@tripplanner/shared';
 import QuickSearchForm from '../components/QuickSearchForm';
 
 export const Home = () => {
@@ -340,7 +334,7 @@ export const Home = () => {
               </div>
               <h3 className="text-lg font-bold text-slate-900">Explore Map & Save Trip</h3>
               <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                Visualize routes with interactive Mapbox/Leaflet pins, export your PDF itinerary, and save to MySQL.
+                See every stop on an interactive map, print your itinerary, and save the trip to your dashboard.
               </p>
             </div>
           </div>
@@ -352,7 +346,7 @@ export const Home = () => {
         <div className="rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 text-white p-8 sm:p-12 shadow-xl shadow-blue-600/20 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
             <span className="text-xs font-semibold uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full">
-              ABESIT Academic Session 2026–27
+              {projectInfo.college.shortName} • Academic Session {projectInfo.academicSession}
             </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold">
               Ready to create your personalized trip?

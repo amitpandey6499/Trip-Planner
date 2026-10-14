@@ -1,5 +1,5 @@
 -- TripPlanner Seed Data
--- ABESIT Mini Project 2026-27
+-- TripPlanner - ABES Engineering College, Ghaziabad (2026-27)
 
 USE tripplanner_db;
 

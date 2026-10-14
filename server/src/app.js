@@ -1,8 +1,11 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import morgan from 'morgan';
-import { rateLimiterMiddleware } from './middleware/rateLimiter.js';
-import { errorHandler } from './middleware/errorHandler.js';
+import { projectInfo } from '@tripplanner/shared';
+import { config } from './config/env.js';
+import { apiLimiter } from './middleware/rateLimiter.js';
+import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 import healthRoutes from './routes/healthRoutes.js';
 import tripRoutes from './routes/tripRoutes.js';
@@ -12,50 +15,44 @@ import userRoutes from './routes/userRoutes.js';
 
 const app = express();
 
-// Middlewares
-app.use(cors({
-  origin: process.env.CLIENT_URL || ['http://localhost:5173', 'http://127.0.0.1:5173'],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-demo-user', 'x-user-id', 'x-user-email']
-}));
+if (config.trustProxy) app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(helmet());
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Allow same-origin / server-to-server requests (no Origin header) and configured client URLs.
+      if (!origin || config.clientUrls.includes(origin)) return callback(null, true);
+      return callback(null, false);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  }),
+);
 
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('dev'));
-}
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
-// Global rate limiting & security shield
-app.use(rateLimiterMiddleware);
+if (config.isDev) app.use(morgan('dev'));
 
-// API Route Mounts
+app.use('/api', apiLimiter);
 app.use('/api/health', healthRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
 app.use('/api/user', userRoutes);
 
-// Root informational endpoint
-app.get('/', (req, res) => {
+app.get('/', (_req, res) => {
   res.json({
-    message: 'TripPlanner AI API Server is operational',
-    docs: '/api/health',
-    institution: 'ABES Institute of Technology (ABESIT), Ghaziabad',
-    academicSession: '2026-27'
+    success: true,
+    message: `${projectInfo.name} API is running`,
+    health: '/api/health',
   });
 });
 
-// 404 Handler
-app.use((req, res) => {
-  res.status(404).json({
-    success: false,
-    error: `Cannot find endpoint ${req.method} ${req.originalUrl}`
-  });
-});
-
-// Global Error Handler
+app.use(notFound);
 app.use(errorHandler);
 
 export default app;

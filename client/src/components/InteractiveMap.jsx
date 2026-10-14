@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { Clock, Navigation, MapPin, Gauge } from 'lucide-react';
+import { Clock, Navigation, Gauge } from 'lucide-react';
 
 // Fix Leaflet marker icon issue in Vite/Webpack
 delete L.Icon.Default.prototype._getIconUrl;
@@ -94,7 +94,6 @@ export const InteractiveMap = ({
           <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1">
             {stops.map((stop, index) => {
               const isHotel = stop.category === 'Hotel' || (stop.placeName && stop.placeName.toLowerCase().includes('hotel'));
-              const isTransit = stop.category === 'Transit';
               const isRestaurant = stop.category === 'Restaurant';
 
               return (

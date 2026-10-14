@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Clock, IndianRupee, Users, Sparkles, Loader2 } from 'lucide-react';
 import { useTrip } from '../context/TripContext';

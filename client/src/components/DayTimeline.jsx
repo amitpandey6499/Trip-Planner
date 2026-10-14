@@ -1,5 +1,4 @@
-import React from 'react';
-import { Clock, MapPin, IndianRupee, Lightbulb, Compass, Navigation } from 'lucide-react';
+import { Clock, MapPin, IndianRupee, Lightbulb, Compass } from 'lucide-react';
 
 export const DayTimeline = ({ day }) => {
   if (!day || !day.activities) {

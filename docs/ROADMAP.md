@@ -1,0 +1,181 @@
+# TripPlanner — Rebuild Roadmap (18 Parts)
+
+> Goal: project ko **error-free, real (fake data nahi) aur impressive** banana.
+> Kaam 18 parts mein bata hai. Har part ke baad project **chalta hua (runnable)** rehta hai.
+
+**Final decisions**
+- Login: **apna JWT + bcrypt** (Clerk hata diya)
+- Database: **MongoDB Atlas + Mongoose** (MySQL + JSON-file store hata denge)
+- AI: **Google Gemini** naya SDK `@google/genai` (model `.env` se)
+- Maps: **Leaflet + OpenStreetMap**, geocoding **Nominatim**, routes **OSRM** (sab free)
+- Monorepo: **npm workspaces** → `shared/` (common code), `server/`, `client/`
+
+---
+
+## Status board
+
+| # | Part | Depends on | Status |
+|---|------|-----------|--------|
+| 1 | Foundation & cleanup | — | ✅ Done |
+| 2 | Shared contracts (data shape) | 1 | ⬜ |
+| 3 | MongoDB Atlas + models | 2 | ⬜ |
+| 4 | JWT Authentication | 3 | ⬜ |
+| 5 | Trips CRUD + URL by trip id | 4 | ⬜ |
+| 6 | Real Gemini AI | 2, 5 | ⬜ |
+| 7 | Deploy v1 (live URL) + CI | 6 | ⬜ |
+| 8 | Real map: geocoding + road routes | 6 | ⬜ |
+| 9 | Streaming generation + regenerate one day | 6 | ⬜ |
+| 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ⬜ |
+| 11 | Weather + packing list + "How to reach" | 6, 8 | ⬜ |
+| 12 | Itinerary editor (drag & drop) | 5, 8 | ⬜ |
+| 13 | AI Trip Chat | 6, 12 | ⬜ |
+| 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ⬜ |
+| 15 | Expense tracker + bill split | 4, 5 | ⬜ |
+| 16 | UI polish (dark mode, Hindi/English, contact form) | 5 | ⬜ |
+| 17 | Admin dashboard | 4, 15 | ⬜ |
+| 18 | Final: tests, API docs, README, report diagrams, final deploy | all | ⬜ |
+
+**Milestones**
+- After **Part 7** → *Viva-safe*: real login, real DB, real AI, live URL.
+- After **Part 12** → *Impressive*: real maps, weather, editor, streaming.
+- After **Part 18** → *Complete*.
+
+---
+
+## Connected parts ko kaise manage karenge (rules)
+
+1. **Order = dependency.** Koi part tab tak shuru nahi hoga jab tak uske "Depends on" wale parts ✅ na ho jaayein.
+2. **Contract first (Part 2).** Trip / Itinerary / Preferences ka data shape **ek hi jagah** (`shared/`, Zod schemas) mein define hoga. Server (validation, DB, AI) aur client (forms, pages) dono wahi use karenge. Shape badalna ho to *pehle* `shared/` badlega — galat jagah turant test/lint mein pakdi jaayegi.
+3. **Seams (jod) pehle se.** Jo cheez baad mein aayegi uska "socket" pehle bana dete hain:
+   - Part 1 se har request pe `req.user = { id, email, name }` milta hai (abhi demo user). Part 4 sirf middleware ke andar ka code badlega — controllers wahi rahenge.
+   - Frontend mein saari API calls sirf `client/src/services/api.js` se. Endpoint badla to ek hi file badlegi.
+4. **Optional future fields.** Schema mein baad wale fields (weather, route, language, originCity) **optional** rakhe jaayenge, taaki purane saved trips kabhi invalid na hon.
+5. **Adapter + mock har external API ke liye** (Gemini, Nominatim, OSRM, Open-Meteo, photos). Har service ka ek real aur ek mock/fallback version — key na ho ya internet na ho to bhi app crash nahi karegi, aur tests bina internet chalenge.
+6. **Feature flags.** Adhoora feature `.env`/config flag se band rahega, taaki beech mein bhi app stable rahe.
+7. **DB changes safe.** Mongoose schema mein naye fields default ke saath; har trip mein `schemaVersion`. Shape badla to chhota migration script.
+8. **Git = safety net.** Har part = ek commit + tag (`part-1`, `part-2` ...). Kuch toota to pichhle tag pe wapas ja sakte hain. Original code `v0-original` tag pe safe hai.
+9. **Regression gate.** Har part ke end mein ye pass hona zaroori:
+   - `npm run check` (lint + saare tests + client build)
+   - Manual smoke checklist (neeche)
+10. **Delivery note** har part ke saath (`docs/CHANGELOG.md`): kaun si files badli, kis aur part pe asar, naye env variables, kaun si command chalani hai.
+
+### Smoke checklist (har part ke baad)
+- [ ] `npm run dev` — server + client bina error/warning ke start
+- [ ] Home → Create Trip → itinerary dikhe
+- [ ] Save → My Trips mein dikhe → View → Delete
+- [ ] Explore, Hotels, Restaurants, Map, Profile pages khulein, browser console mein error nahi
+- [ ] (Part 4 ke baad) Signup → Logout → Login → sirf apne trips dikhein
+
+---
+
+## Part-wise detail
+
+### Part 1 — Foundation & cleanup ✅
+**Kya kiya**
+- Git baseline (`v0-original`), npm workspaces (`shared`, `server`, `client`), root se ek hi `npm install`.
+- Server: `"type": "module"`, `.env` sabse pehle load (`config/env.js`, Zod se validate), Arcjet aur Clerk hataye.
+- Error handling: `ApiError`, `asyncHandler`, sahi status codes (galat JSON → 400), production mein stack trace nahi.
+- `helmet`, CORS config se, body limit 1 MB, nodemon `src/data` ignore (save pe restart band).
+- Auth seam: `req.user` (abhi demo). `x-user-id` header pe bharosa band (koi doosre ka data nahi padh sakta).
+- `/api/health` asli status batata hai (kaunsi service configured hai). Profile page pe fake "Enabled/Active" badges hataye.
+- College ka naam/details ek jagah (`shared/src/projectInfo.js`) — har page wahi se padhta hai.
+- Tailwind: missing classes (`shadow-xs`, `animate-in`, `fade-in` ...) ab kaam karti hain.
+- ESLint + tests (`node --test` + supertest, 14 server tests) + `npm run check`.
+- Vendor chunks split (client bundle warning khatam). Hotels / My Trips pe loading state.
+
+**Abhi bhi baaki (jaan-boojh kar, apne part mein theek honge):**
+- Login abhi demo hai, sab ek hi demo user → **Part 4**
+- `/itinerary` seedha kholne pe Manali auto-generate, Save dobara dabane pe duplicate, Edit button → **Part 5**
+- 4 `react-hooks/exhaustive-deps` warnings (ItineraryView, HotelsView, RestaurantsView) → **Part 5 / 10** (ye pages wahan rewrite honge)
+- Fake "Landmark 1A" itinerary, purana Gemini SDK → **Part 6**
+- Map distance "98 km" hardcoded → **Part 8**
+
+**Depends on:** — **Affects:** sab parts (base)
+
+### Part 2 — Shared contracts
+- `shared/src/schemas/`: `preferences`, `itinerary` (day, activity, hotel, restaurant, budget), `trip`, `auth` — Zod.
+- `shared/src/constants.js`: interests, categories, budget tiers, travel styles, stay types, diets (wizard + server dono yahin se).
+- `shared/src/utils/`: `calcDuration`, `tripStatus(start,end)` (Upcoming/Ongoing/Past), `normalizeBudget` (totals hamesha sahi).
+- Client wizard aur server controller in schemas se validate karenge (NaN budget, end<start khatam).
+- **Done when:** galat input pe dono jagah same error message; tests pass.
+- **Affects:** 3, 5, 6, 12, 13 (sab isi shape pe chalenge)
+
+### Part 3 — MongoDB Atlas + models
+- Atlas free cluster setup guide (aapko account banana hai), `MONGODB_URI` in `.env`.
+- Models: `User`, `Trip` (preferences + itinerary embedded + `schemaVersion`), `AiCache`, `ContactMessage`.
+- `config/db.js` → Mongoose connect (retry + clear error). JSON-file store aur MySQL code hataya.
+- `POST /api/contact` → Contact form ke messages DB mein save (abhi form sirf "Message Received" dikhata hai).
+- Seed script: demo user + sample trips.
+- **Needs from you:** MongoDB Atlas account (free) — steps diye jaayenge.
+- **Affects:** 4, 5, 10, 15, 17
+
+### Part 4 — JWT Authentication
+- Server: `/api/auth/register`, `/login`, `/logout`, `/me`; bcrypt hash; JWT in **httpOnly cookie**; login rate-limit.
+- `requireAuth` middleware ab asli (Part 1 wala seam). Har trip query mein `owner = req.user.id` (doosre ka data access impossible).
+- Client: Signup/Login forms (validation), AuthContext rewrite, ProtectedRoute asli, Logout sach mein logout, Profile real data.
+- Fake "Continue with Google" aur auto-demo-login hataye. (Optional "Demo account" button = asli seeded user se login.)
+- **Affects:** 5, 10, 15, 17
+
+### Part 5 — Trips CRUD + URL by trip id
+- Routes: `/trips/new` (wizard), `/trips/:id` (itinerary), `/trips/:id/edit`. Refresh pe trip gayab nahi.
+- Save ek baar (dobara click = update, duplicate nahi). Edit wizard pehle se bhara hua.
+- My Trips: status dates se auto (Upcoming/Ongoing/Past), loading skeleton, search.
+- Server: validation, no mass-assignment (sirf allowed fields update), ownership check.
+- **Affects:** 6, 11–16
+
+### Part 6 — Real Gemini AI
+- `@google/genai`, model `GEMINI_MODEL` env se, `responseSchema` (Part 2 schema se), Zod validation, 1 retry + timeout.
+- Budget server pe recompute (din ka total = overall total, travelers ke hisaab se).
+- Wizard mein naye fields: travel style, stay type, diet, pace.
+- AI na chale to **honest sample mode** (8 destinations ke curated plans, badge: "Sample plan — AI offline"), "Landmark 1A" jaisa fake data khatam.
+- Cache (same input → turant result), per-user daily limit, React ErrorBoundary.
+- **Needs from you:** Gemini API key (free, aistudio.google.com).
+- **Affects:** 7, 8, 9, 11, 13
+
+### Part 7 — Deploy v1 + CI
+- Client → Vercel, Server → Render, DB → Atlas. Production env vars, CORS, cookies (secure, sameSite).
+- GitHub Actions: har push pe `npm run check`.
+- **Needs from you:** GitHub, Vercel, Render accounts (free).
+
+### Part 8 — Real map
+- Geocoding service (Nominatim, cache in DB, 1 req/sec) → AI ke places ke sahi coordinates.
+- Routing service (OSRM) → har din ka asli road route, distance, time ("98 km" hardcode khatam).
+- Map: `fitBounds`, hotels/restaurants ke pins, card click → map pe focus.
+- **Affects:** 10, 11, 12
+
+### Part 9 — Streaming + regenerate one day
+- Server-Sent Events: din ek-ek karke screen pe aate hain (progress bar).
+- "Sirf Day 3 dobara banao" button.
+
+### Part 10 — Destinations, photos, hotels, favorites
+- Destinations DB mein (20+ Indian destinations), categories sahi (Popular/Hidden Gems ab khaali nahi).
+- Real photos (Wikipedia/Unsplash service + cache). Hotels tier filter sach mein filter kare.
+- Favorites ❤️ DB mein save.
+
+### Part 11 — Weather + packing list + how to reach
+- Open-Meteo: trip dates ka per-day forecast (16 din tak), uske baad climate average.
+- Mausam + activities ke hisaab se packing list.
+- Starting city → train/bus/flight suggestions + IRCTC / redBus / Google Flights search links.
+
+### Part 12 — Itinerary editor
+- `@dnd-kit` drag & drop: activity reorder, add, edit, delete; budget + route auto update; save.
+
+### Part 13 — AI Trip Chat
+- "Day 2 relaxed kar do" → AI changes propose kare → preview (diff) → Apply.
+- Output Part 2 schema se validate; save Part 12 wale path se.
+
+### Part 14 — Sharing & export
+- Public link `/share/:slug` (on/off toggle), QR code, WhatsApp share.
+- Asli PDF (poora trip, saare din), Google Calendar `.ics` export.
+
+### Part 15 — Expense tracker + bill split
+- Kharche add karo (kisne diya, kis-kis mein bata), "kaun kisko kitna dega", estimate vs actual chart.
+
+### Part 16 — UI polish
+- Dark mode, Hindi/English toggle (AI output bhi Hindi), skeleton loaders, toasts, route-level code-splitting, mobile check.
+
+### Part 17 — Admin dashboard
+- Admin role; trips/day, popular destinations, AI usage, contact messages — charts.
+
+### Part 18 — Final
+- Swagger API docs (`/api/docs`), tests badhana (Vitest + React Testing Library), README rewrite, architecture + ER diagram (report ke liye), final deploy.

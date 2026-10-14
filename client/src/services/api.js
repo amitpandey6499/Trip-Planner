@@ -1,37 +1,36 @@
 import axios from 'axios';
 
+/**
+ * The ONLY place the frontend talks to the backend.
+ * Pages call tripApi.* — if an endpoint changes, only this file changes.
+ *
+ * In development requests go to "/api" and Vite proxies them to http://localhost:5000
+ * (see vite.config.js). VITE_API_BASE_URL is only needed for a separately hosted backend.
+ */
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  withCredentials: true, // the login cookie (Part 4) travels with every request
+  timeout: 60000, // AI generation can take a while
   headers: {
     'Content-Type': 'application/json'
   }
 });
 
-// Request interceptor to inject auth token or demo mode token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('trip_auth_token');
-  const user = localStorage.getItem('trip_user');
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  } else {
-    // Demo user fallback
-    config.headers.Authorization = 'Bearer demo_user_token';
-    config.headers['x-demo-user'] = 'true';
-  }
-
-  if (user) {
-    try {
-      const parsed = JSON.parse(user);
-      config.headers['x-user-id'] = parsed.id || 'user_demo_123';
-      config.headers['x-user-email'] = parsed.email || 'demo@tripplanner.com';
-    } catch (e) {
-      // Ignore
+// Turn server errors into readable messages: err.message = server's "error" text.
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    const serverMessage = error.response?.data?.error;
+    if (serverMessage) {
+      error.message = serverMessage;
+    } else if (error.code === 'ECONNABORTED') {
+      error.message = 'The server took too long to respond. Please try again.';
+    } else if (!error.response) {
+      error.message = 'Cannot reach the server. Is the backend running?';
     }
+    return Promise.reject(error);
   }
-
-  return config;
-});
+);
 
 export const tripApi = {
   // Generate itinerary via AI

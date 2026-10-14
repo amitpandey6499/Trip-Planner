@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, Heart, MapPin, ArrowRight, Eye } from 'lucide-react';
 import { useTrip } from '../context/TripContext';

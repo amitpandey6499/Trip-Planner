@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTrip } from '../context/TripContext';
 import { tripApi } from '../services/api';
 import RestaurantCard from '../components/RestaurantCard';
-import { Map, Utensils } from 'lucide-react';
+import { Map } from 'lucide-react';
 
 export const RestaurantsView = () => {
   const navigate = useNavigate();

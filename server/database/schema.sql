@@ -1,5 +1,5 @@
 -- TripPlanner Database Schema
--- College Mini Project: ABES Institute of Technology (ABESIT), Ghaziabad
+-- College Mini Project: ABES Engineering College, Ghaziabad
 -- Academic Session: 2026-27
 
 CREATE DATABASE IF NOT EXISTS tripplanner_db;

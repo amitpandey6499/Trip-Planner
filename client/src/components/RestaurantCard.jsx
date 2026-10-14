@@ -1,5 +1,4 @@
-import React from 'react';
-import { Star, MapPin, Utensils, IndianRupee } from 'lucide-react';
+import { Star, MapPin, Utensils } from 'lucide-react';
 
 export const RestaurantCard = ({ restaurant, onSelectOnMap }) => {
   return (

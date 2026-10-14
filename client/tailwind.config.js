@@ -1,9 +1,8 @@
+import animate from 'tailwindcss-animate';
+
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
   theme: {
     extend: {
       colors: {
@@ -18,26 +17,34 @@ export default {
           800: '#1E293B',
           900: '#0F172A',
         },
-        teal: {
-          500: '#14B8A6',
-          600: '#0D9488',
-          700: '#0F766E',
-        },
         surface: {
           bg: '#F8FAFC',
           card: '#FFFFFF',
           border: '#E2E8F0',
-        }
+        },
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
       },
       boxShadow: {
-        'soft': '0 4px 20px -2px rgba(15, 23, 42, 0.06)',
+        // The code used these Tailwind v4 names; they did not exist in v3, so define them here.
+        '2xs': '0 1px rgba(15, 23, 42, 0.05)',
+        xs: '0 1px 2px 0 rgba(15, 23, 42, 0.05)',
+        soft: '0 4px 20px -2px rgba(15, 23, 42, 0.06)',
         'soft-lg': '0 10px 25px -3px rgba(15, 23, 42, 0.08), 0 4px 6px -4px rgba(15, 23, 42, 0.04)',
-        'elevated': '0 20px 30px -5px rgba(15, 23, 42, 0.1)',
-      }
+        elevated: '0 20px 30px -5px rgba(15, 23, 42, 0.1)',
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
+      scale: {
+        98: '0.98',
+      },
+      animation: {
+        'spin-slow': 'spin 8s linear infinite',
+      },
     },
   },
-  plugins: [],
-}
+  // Provides animate-in, fade-in, zoom-in-95, slide-in-from-* used across the pages.
+  plugins: [animate],
+};

@@ -1,7 +1,8 @@
-import fs from 'fs';
-import path from 'path';
+import fs from 'node:fs';
+import path from 'node:path';
 import axios from 'axios';
-import { fileURLToPath } from 'url';
+import { fileURLToPath } from 'node:url';
+import { config } from '../config/env.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -205,13 +206,14 @@ export const getHotelsForDestination = async (destination, budgetTier) => {
   const key = (destination || '').trim().toLowerCase();
   
   // If Google Places API is available
-  if (process.env.GOOGLE_PLACES_API_KEY && process.env.GOOGLE_PLACES_API_KEY !== 'your_google_places_api_key') {
+  if (config.googlePlacesKey) {
     try {
       const resp = await axios.get('https://maps.googleapis.com/maps/api/place/textsearch/json', {
         params: {
           query: `Hotels in ${destination}`,
-          key: process.env.GOOGLE_PLACES_API_KEY
-        }
+          key: config.googlePlacesKey
+        },
+        timeout: 8000
       });
       if (resp.data && resp.data.results && resp.data.results.length > 0) {
         return resp.data.results.slice(0, 6).map((item, idx) => ({

@@ -1,6 +1,8 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { Compass, Heart, Github, GraduationCap, ShieldCheck, MapPin } from 'lucide-react';
+import { Compass, GraduationCap, ShieldCheck } from 'lucide-react';
+import { projectInfo, collegeLabel } from '@tripplanner/shared';
+
+const chipColors = ['text-blue-300', 'text-emerald-300', 'text-purple-300', 'text-teal-300', 'text-sky-300', 'text-amber-300'];
 
 export const Footer = () => {
   return (
@@ -26,8 +28,8 @@ export const Footer = () => {
             <div className="flex items-center gap-2 text-xs text-amber-400 bg-slate-800/80 p-3 rounded-lg border border-slate-700/60 max-w-md">
               <GraduationCap className="w-5 h-5 flex-shrink-0 text-amber-400" />
               <div>
-                <span className="font-semibold block text-slate-200">College Mini Project</span>
-                <span>ABES Institute of Technology (ABESIT), Ghaziabad • Session 2026–27</span>
+                <span className="font-semibold block text-slate-200">{projectInfo.projectType}</span>
+                <span>{collegeLabel} • Session {projectInfo.academicSession}</span>
               </div>
             </div>
           </div>
@@ -72,13 +74,11 @@ export const Footer = () => {
               Technology Stack
             </h4>
             <div className="flex flex-wrap gap-1.5 text-[11px]">
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-blue-300 border border-slate-700">React.js</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-emerald-300 border border-slate-700">Node / Express</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-sky-300 border border-slate-700">MySQL Database</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-purple-300 border border-slate-700">Google Gemini AI</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-amber-300 border border-slate-700">Clerk Auth</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-teal-300 border border-slate-700">Mapbox / Leaflet</span>
-              <span className="px-2.5 py-1 rounded bg-slate-800 text-rose-300 border border-slate-700">Arcjet Protection</span>
+              {projectInfo.techStack.map((tech, idx) => (
+                <span key={tech} className={`px-2.5 py-1 rounded bg-slate-800 border border-slate-700 ${chipColors[idx % chipColors.length]}`}>
+                  {tech}
+                </span>
+              ))}
             </div>
           </div>
 
@@ -86,7 +86,7 @@ export const Footer = () => {
 
         {/* Bottom bar */}
         <div className="pt-8 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 gap-4">
-          <p>© 2026–2027 TripPlanner AI. Built for ABESIT Department of Computer Science & Engineering.</p>
+          <p>© {projectInfo.academicSession} {projectInfo.name}. Built at {projectInfo.college.department}, {collegeLabel}.</p>
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1 text-slate-400">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />

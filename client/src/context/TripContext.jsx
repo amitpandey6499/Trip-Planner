@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { tripApi } from '../services/api.js';
 
 const TripContext = createContext();
@@ -60,6 +60,8 @@ export const TripProvider = ({ children }) => {
 
       const res = await tripApi.generate(preferences);
       if (res.success && res.data) {
+        // Keep the server-validated preferences (it fills in endDate, fixes duration, etc.)
+        if (res.preferences) setCurrentPreferences(res.preferences);
         setCurrentItinerary(res.data);
         showToast(`Itinerary generated for ${preferences.destination}!`);
         return res.data;
@@ -67,7 +69,7 @@ export const TripProvider = ({ children }) => {
         throw new Error(res.error || 'Failed to generate itinerary');
       }
     } catch (err) {
-      const msg = err.response?.data?.error || err.message || 'Something went wrong';
+      const msg = err.message || 'Something went wrong';
       setError(msg);
       throw err;
     } finally {
