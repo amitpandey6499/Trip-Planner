@@ -1,10 +1,21 @@
 import { projectInfo, collegeLabel } from '@tripplanner/shared';
 import { config, serviceStatus } from './config/env.js';
 import app from './app.js';
-import { initDB } from './config/db.js';
+import { connectDB, disconnectDB } from './config/db.js';
+import { ensureDemoData } from './services/demoService.js';
 
 const start = async () => {
-  await initDB();
+  try {
+    await connectDB();
+  } catch (err) {
+    console.error(`\n[DB] Could not connect to MongoDB: ${err.message}`);
+    console.error(`[DB] Hint: ${err.hint}\n`);
+    process.exit(1);
+  }
+
+  if (config.auth.demoLoginEnabled) {
+    await ensureDemoData();
+  }
 
   const server = app.listen(config.port, () => {
     const services = serviceStatus();
@@ -13,11 +24,9 @@ const start = async () => {
     console.log(` Health check     ->  http://localhost:${config.port}/api/health`);
     console.log(` ${collegeLabel} | ${projectInfo.academicSession}`);
     console.log('='.repeat(60));
-    if (!services.geminiAI) {
-      console.log('[AI] GEMINI_API_KEY is not set: itineraries will use sample/offline mode.');
-    } else {
-      console.log(`[AI] Gemini model: ${config.gemini.model}`);
-    }
+    if (!services.geminiAI) console.log('[AI] GEMINI_API_KEY is not set: itineraries will use sample/offline mode.');
+    else console.log(`[AI] Gemini model: ${config.gemini.model}`);
+    if (config.auth.usingDevSecret) console.log('[Auth] JWT_SECRET not set: using a development-only secret (set one before deploying).');
   });
 
   server.on('error', (err) => {
@@ -28,6 +37,17 @@ const start = async () => {
     }
     process.exit(1);
   });
+
+  // Close the HTTP server and the DB connection cleanly (Ctrl+C, nodemon restart, hosting shutdown).
+  const shutdown = (signal) => {
+    console.log(`[Server] ${signal} received, shutting down...`);
+    server.close(() => {
+      disconnectDB().finally(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(0), 5000).unref();
+  };
+  process.once('SIGINT', () => shutdown('SIGINT'));
+  process.once('SIGTERM', () => shutdown('SIGTERM'));
 };
 
 start().catch((err) => {

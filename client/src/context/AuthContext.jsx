@@ -1,85 +1,75 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { authApi, SESSION_EXPIRED_EVENT } from '../services/api';
 
-// TEMPORARY (Parts 1-3): browser-only demo session.
-// Part 4 replaces this file with real JWT login (register / login / logout / me).
-// Pages only use: user, isSignedIn, loading, login, logout.
-
-const AuthContext = createContext();
+/**
+ * Login state for the whole app (Part 4: real JWT sessions).
+ *
+ * The session itself is an httpOnly cookie set by the server — JavaScript cannot read it,
+ * so on start-up we simply ask the server "who am I?" (GET /api/auth/me).
+ * Nothing about the user is kept in localStorage.
+ */
+const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // true until the first /auth/me answer
 
-  useEffect(() => {
-    // Check saved local user session
-    const savedUser = localStorage.getItem('trip_user');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (e) {
-        localStorage.removeItem('trip_user');
-      }
-    } else {
-      // Default initial demo user for seamless evaluation
-      const defaultUser = {
-        id: 'user_demo_123',
-        name: 'Aarav Sharma',
-        email: 'demo@tripplanner.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
-        role: 'Traveler'
-      };
-      setUser(defaultUser);
-      localStorage.setItem('trip_user', JSON.stringify(defaultUser));
-      localStorage.setItem('trip_auth_token', 'demo_user_token');
+  const refreshUser = useCallback(async () => {
+    try {
+      const res = await authApi.me();
+      setUser(res.data);
+      return res.data;
+    } catch {
+      setUser(null);
+      return null;
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
-  const login = (email, _password) => {
-    const newUser = {
-      id: `user_${Date.now()}`,
-      name: email.split('@')[0].replace('.', ' ').replace(/^./, str => str.toUpperCase()),
-      email: email,
-      avatarUrl: `https://api.dicebear.com/7.x/avataaars/svg?seed=${email}`,
-      role: 'Traveler'
-    };
-    setUser(newUser);
-    localStorage.setItem('trip_user', JSON.stringify(newUser));
-    localStorage.setItem('trip_auth_token', `demo_token_${Date.now()}`);
-    return newUser;
-  };
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
-  const loginWithGoogle = () => {
-    const googleUser = {
-      id: 'user_google_778',
-      name: 'Priya Patel',
-      email: 'priya.patel@gmail.com',
-      avatarUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80',
-      role: 'Traveler'
-    };
-    setUser(googleUser);
-    localStorage.setItem('trip_user', JSON.stringify(googleUser));
-    localStorage.setItem('trip_auth_token', 'demo_google_token');
-    return googleUser;
-  };
+  // Any API call that gets 401 means the session is gone: show the user as logged out.
+  useEffect(() => {
+    const onExpired = () => setUser(null);
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
+  }, []);
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('trip_user');
-    localStorage.removeItem('trip_auth_token');
-  };
+  /** Each of these throws on failure; err.message / err.fields come from the server. */
+  const login = useCallback(
+    async ({ email, password, rememberMe = true }) => {
+      await authApi.login({ email, password, rememberMe });
+      return refreshUser();
+    },
+    [refreshUser],
+  );
+
+  const register = useCallback(
+    async ({ name, email, password }) => {
+      await authApi.register({ name, email, password });
+      return refreshUser();
+    },
+    [refreshUser],
+  );
+
+  const loginDemo = useCallback(async () => {
+    await authApi.loginDemo();
+    return refreshUser();
+  }, [refreshUser]);
+
+  const logout = useCallback(async () => {
+    try {
+      await authApi.logout();
+    } finally {
+      setUser(null);
+    }
+  }, []);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isSignedIn: !!user,
-        loading,
-        login,
-        loginWithGoogle,
-        logout
-      }}
-    >
+    <AuthContext.Provider value={{ user, isSignedIn: Boolean(user), loading, login, register, loginDemo, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

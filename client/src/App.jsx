@@ -19,6 +19,7 @@ import MyTrips from './pages/MyTrips';
 import Profile from './pages/Profile';
 import About from './pages/About';
 import Contact from './pages/Contact';
+import NotFound from './pages/NotFound';
 
 export const App = () => {
   return (
@@ -30,32 +31,23 @@ export const App = () => {
             <Navbar />
             <main className="flex-1">
               <Routes>
+                {/* Public pages */}
                 <Route path="/" element={<Home />} />
                 <Route path="/auth" element={<Auth />} />
-                <Route path="/create-trip" element={<CreateTrip />} />
                 <Route path="/explore" element={<Explore />} />
-                <Route path="/itinerary" element={<ItineraryView />} />
                 <Route path="/map" element={<MapView />} />
                 <Route path="/hotels" element={<HotelsView />} />
                 <Route path="/restaurants" element={<RestaurantsView />} />
-                <Route
-                  path="/my-trips"
-                  element={
-                    <ProtectedRoute>
-                      <MyTrips />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Profile />
-                    </ProtectedRoute>
-                  }
-                />
                 <Route path="/about" element={<About />} />
                 <Route path="/contact" element={<Contact />} />
+
+                {/* Need login (trips belong to a user; AI generation uses quota) */}
+                <Route path="/create-trip" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
+                <Route path="/itinerary" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
+                <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+
+                <Route path="*" element={<NotFound />} />
               </Routes>
             </main>
             <Footer />

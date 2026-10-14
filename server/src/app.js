@@ -1,4 +1,5 @@
 import express from 'express';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -8,10 +9,11 @@ import { apiLimiter } from './middleware/rateLimiter.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
 
 import healthRoutes from './routes/healthRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import tripRoutes from './routes/tripRoutes.js';
 import placesRoutes from './routes/placesRoutes.js';
 import recommendationsRoutes from './routes/recommendationsRoutes.js';
-import userRoutes from './routes/userRoutes.js';
+import contactRoutes from './routes/contactRoutes.js';
 
 const app = express();
 
@@ -32,17 +34,20 @@ app.use(
   }),
 );
 
+// JSON bodies only. (No urlencoded parser: a plain HTML form on another site
+// cannot send JSON, which is part of our CSRF protection for cookie logins.)
 app.use(express.json({ limit: '1mb' }));
-app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+app.use(cookieParser());
 
 if (config.isDev) app.use(morgan('dev'));
 
 app.use('/api', apiLimiter);
 app.use('/api/health', healthRoutes);
+app.use('/api/auth', authRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/places', placesRoutes);
 app.use('/api/recommendations', recommendationsRoutes);
-app.use('/api/user', userRoutes);
+app.use('/api/contact', contactRoutes);
 
 app.get('/', (_req, res) => {
   res.json({

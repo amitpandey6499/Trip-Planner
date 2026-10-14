@@ -1,8 +1,10 @@
 import { useNavigate } from 'react-router-dom';
-import { Mail, GraduationCap, LogOut, CheckCircle2, AlertTriangle, XCircle, Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
+import { Mail, GraduationCap, LogOut, CheckCircle2, AlertTriangle, XCircle, Loader2, CalendarDays, Map } from 'lucide-react';
 import { projectInfo, collegeLabel } from '@tripplanner/shared';
 import { useAuth } from '../context/AuthContext';
 import { useSystemStatus } from '../hooks/useSystemStatus';
+import Avatar from '../components/Avatar';
 
 const badgeStyles = {
   ok: 'bg-emerald-100 text-emerald-800',
@@ -39,10 +41,11 @@ const buildStatusCards = (status, error) => {
     { title: 'Backend API', state: 'ok', label: 'Online', detail: `${status.environment} • v${status.version} • up ${status.uptimeSeconds}s` },
     {
       title: 'Database',
-      state: database.isMySql ? 'ok' : 'warn',
-      label: database.isMySql ? 'MySQL' : 'Local store',
-      detail: database.isMySql ? 'Connected to MySQL.' : 'MySQL not running, trips are saved in a local JSON file.',
+      state: database.connected ? 'ok' : 'error',
+      label: database.connected ? 'Connected' : 'Disconnected',
+      detail: database.connected ? `MongoDB database "${database.name}"` : 'MongoDB is not reachable. Check MONGODB_URI in server/.env.',
     },
+    { title: 'Login', state: 'ok', label: 'JWT', detail: 'Session in an httpOnly cookie, passwords hashed with bcrypt.' },
     {
       title: 'Google Gemini AI',
       state: services.geminiAI ? 'ok' : 'warn',
@@ -61,9 +64,14 @@ const buildStatusCards = (status, error) => {
 
 export const Profile = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { status, error, loading } = useSystemStatus();
   const cards = buildStatusCards(status, error);
+
+  // Fresh trip count every time the profile opens.
+  useEffect(() => {
+    refreshUser();
+  }, [refreshUser]);
 
   return (
     <div className="min-h-screen py-8 sm:py-12 px-4 sm:px-6 lg:px-8 bg-slate-50">
@@ -75,24 +83,34 @@ export const Profile = () => {
 
         {/* User card */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft flex flex-col sm:flex-row items-center gap-6">
-          <div className="w-20 h-20 rounded-2xl overflow-hidden border-2 border-blue-500/30 p-1 flex-shrink-0 bg-slate-100">
-            {user?.avatarUrl && <img src={user.avatarUrl} alt={user?.name || 'User'} className="w-full h-full object-cover rounded-xl" />}
-          </div>
+          <Avatar user={user} size="w-20 h-20" textSize="text-2xl" />
 
           <div className="space-y-1 text-center sm:text-left flex-1">
-            <h2 className="text-xl font-bold text-slate-900">{user?.name}</h2>
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2 justify-center sm:justify-start">
+              {user?.name}
+              {user?.isDemo && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-800">Demo account</span>}
+            </h2>
             <p className="text-xs text-slate-500 flex items-center justify-center sm:justify-start gap-1">
               <Mail className="w-3.5 h-3.5 text-slate-400" />
               {user?.email}
             </p>
-            <p className="text-[11px] text-slate-400">
-              User ID: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">{user?.id}</code>
+            <p className="text-xs text-slate-500 flex flex-wrap items-center justify-center sm:justify-start gap-3">
+              {user?.createdAt && (
+                <span className="flex items-center gap-1">
+                  <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                  Member since {new Date(user.createdAt).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' })}
+                </span>
+              )}
+              <span className="flex items-center gap-1">
+                <Map className="w-3.5 h-3.5 text-slate-400" />
+                {user?.tripCount ?? 0} saved {user?.tripCount === 1 ? 'trip' : 'trips'}
+              </span>
             </p>
           </div>
 
           <button
-            onClick={() => {
-              logout();
+            onClick={async () => {
+              await logout();
               navigate('/');
             }}
             className="px-4 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 text-xs font-semibold flex items-center gap-1.5 transition-colors"

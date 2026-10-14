@@ -3,10 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { MapPin, Calendar, Clock, IndianRupee, Users, Sparkles, Loader2, AlertCircle } from 'lucide-react';
 import { POPULAR_DESTINATIONS, TripPreferencesSchema, addDays, suggestBudgetTier, todayIso, validate } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
+import { useAuth } from '../context/AuthContext';
 
 export const QuickSearchForm = () => {
   const navigate = useNavigate();
   const { generateTrip, setCurrentPreferences, loading } = useTrip();
+  const { isSignedIn } = useAuth();
 
   const [destination, setDestination] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -38,6 +40,13 @@ export const QuickSearchForm = () => {
       return;
     }
     setFormError('');
+
+    // Guests: keep what they typed, ask them to sign in, then continue in the wizard.
+    if (!isSignedIn) {
+      setCurrentPreferences(result.data);
+      navigate('/auth', { state: { from: '/create-trip' } });
+      return;
+    }
 
     try {
       await generateTrip(result.data);

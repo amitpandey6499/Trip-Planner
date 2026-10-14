@@ -13,6 +13,7 @@ export * from './schemas/preferences.js';
 export * from './schemas/itinerary.js';
 export * from './schemas/trip.js';
 export * from './schemas/auth.js';
+export * from './schemas/contact.js';
 
 export * from './validation.js';
 export * from './itinerary/normalize.js';

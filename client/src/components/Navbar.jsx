@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Compass, Sparkles, User, LogOut, Menu, X, BookmarkCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import Avatar from './Avatar';
 
 export const Navbar = () => {
   const { user, isSignedIn, logout } = useAuth();
@@ -60,16 +61,19 @@ export const Navbar = () => {
           {/* Right Action Buttons */}
           <div className="hidden md:flex items-center gap-3">
             {isSignedIn ? (
-              <div className="relative">
+              <div className="relative flex items-center gap-3">
+                <Link
+                  to="/create-trip"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium shadow-sm shadow-blue-500/20 transition-all"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  Plan a Trip
+                </Link>
                 <button
                   onClick={() => setUserDropdownOpen(!userDropdownOpen)}
                   className="flex items-center gap-2.5 p-1.5 pl-2 pr-3 rounded-full hover:bg-slate-100 border border-slate-200 transition-all focus:outline-none"
                 >
-                  <img
-                    src={user.avatarUrl || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80'}
-                    alt={user.name}
-                    className="w-8 h-8 rounded-full object-cover border border-slate-300"
-                  />
+                  <Avatar user={user} />
                   <span className="text-xs font-medium text-slate-700 max-w-[100px] truncate">
                     {user.name}
                   </span>
@@ -77,7 +81,7 @@ export const Navbar = () => {
 
                 {userDropdownOpen && (
                   <div
-                    className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2"
+                    className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-slate-100 py-1.5 z-50 animate-in fade-in slide-in-from-top-2"
                     onMouseLeave={() => setUserDropdownOpen(false)}
                   >
                     <div className="px-4 py-2 border-b border-slate-100">
@@ -106,9 +110,9 @@ export const Navbar = () => {
                     <div className="border-t border-slate-100 my-1"></div>
 
                     <button
-                      onClick={() => {
+                      onClick={async () => {
                         setUserDropdownOpen(false);
-                        logout();
+                        await logout();
                         navigate('/');
                       }}
                       className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-red-600 hover:bg-red-50 transition-colors text-left"
@@ -179,9 +183,10 @@ export const Navbar = () => {
                   Profile & Settings ({user.name})
                 </Link>
                 <button
-                  onClick={() => {
+                  onClick={async () => {
                     setMobileMenuOpen(false);
-                    logout();
+                    await logout();
+                    navigate('/');
                   }}
                   className="w-full text-left px-3 py-2 rounded-md text-base text-red-600 hover:bg-red-50"
                 >

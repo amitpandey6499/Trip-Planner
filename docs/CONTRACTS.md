@@ -24,7 +24,9 @@ import { TripPreferencesSchema, normalizeItinerary, formatINR, tripPhase } from 
 | `ItinerarySchema` | AI / sample output, saved itinerary, client rendering. Details mein tolerant (galat cost → 0, galat URL hata do), structure mein strict. |
 | `SaveTripSchema` | `POST /api/trips` → `{ tripData, itinerary }` |
 | `UpdateTripSchema` | `PUT /api/trips/:id` — sirf title, dates, travelers, budget, budgetCategory. Baaki fields ignore. |
-| `RegisterSchema`, `LoginSchema` | Part 4 (JWT login) ke liye pehle se tay. |
+| `RegisterSchema`, `LoginSchema` | `POST /api/auth/register`, `/login` + Login page. Password: 8–72 chars, ek letter, ek number. |
+| `ContactSchema` | Contact page + `POST /api/contact`. |
+| `SaveTripSchema.preferences` | interests / pace / stay / diet / notes trip ke saath save hote hain (Edit ke liye). |
 
 ## Budget hamesha kaise add up hota hai (`computeBudget`)
 1. Har activity ka `cost` uske category bucket mein jaata hai: Restaurant → food, Transit → transport, Attraction/Activity/Shopping → activities.
@@ -39,3 +41,9 @@ Ise do baar chalao to result same rehta hai (save karte waqt server dobara chala
 ## Future fields (optional, abhi khaali)
 `originCity`, `language` (preferences) · `routes` (Part 8) · `weather`, `packingList`, `transportOptions` (Part 11).
 Optional hain, isliye purane saved trips kabhi invalid nahi honge.
+
+## Login (Part 4)
+- Session = JWT (HS256, `sub` = user id) in **httpOnly** cookie `tp_session`. Client kabhi token nahi dekhta / store karta.
+- Client start pe `GET /api/auth/me` poochta hai; koi bhi API 401 de to client user ko logged-out maan leta hai.
+- `req.user` (server) = `{ id, name, email, role, avatarUrl, isDemo, createdAt }` — kabhi password hash nahi.
+- Har trip query = `{ _id, owner: req.user.id }`. Doosre user ka trip "nahi mila" (404) hota hai, "forbidden" nahi — taaki pata bhi na chale ki wo id exist karti hai.

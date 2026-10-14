@@ -1,6 +1,7 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { defaultTripDates, normalizeItinerary } from '@tripplanner/shared';
 import { tripApi } from '../services/api.js';
+import { useAuth } from './AuthContext';
 
 const TripContext = createContext(null);
 
@@ -31,6 +32,17 @@ const factsFromTrip = (trip) => ({
   budgetCategory: trip.budgetCategory,
 });
 
+/** Style preferences saved with a trip (so Edit can restore the whole wizard). */
+const stylePreferences = (p) => ({
+  interests: p.interests ?? [],
+  travelStyle: p.travelStyle,
+  accommodationType: p.accommodationType,
+  dietaryPreference: p.dietaryPreference,
+  specialNotes: p.specialNotes ?? '',
+  ...(p.originCity && { originCity: p.originCity }),
+  language: p.language ?? 'en',
+});
+
 /** Old saved itineraries may predate the shared contract: upgrade them for display. */
 const upgradeItinerary = (itinerary, facts) => {
   if (!itinerary) return null;
@@ -43,6 +55,7 @@ const upgradeItinerary = (itinerary, facts) => {
 };
 
 export const TripProvider = ({ children }) => {
+  const { user } = useAuth();
   const [currentItinerary, setCurrentItinerary] = useState(null);
   const [currentPreferences, setCurrentPreferences] = useState(makeDefaultPreferences);
   // id of the saved trip the current itinerary belongs to (null = not saved yet)
@@ -120,7 +133,7 @@ export const TripProvider = ({ children }) => {
         budgetCategory: p.budgetCategory,
         destinationImage: currentItinerary.destinationImage,
       };
-      const res = await tripApi.saveTrip(tripData, currentItinerary);
+      const res = await tripApi.saveTrip({ tripData, preferences: stylePreferences(p), itinerary: currentItinerary });
       setCurrentTripId(res.data.id);
       showToast(currentTripId ? 'Trip updated!' : 'Trip successfully saved to your dashboard!');
       fetchTrips();
@@ -155,7 +168,7 @@ export const TripProvider = ({ children }) => {
       const res = await tripApi.getTripById(id);
       const trip = res.data;
       const facts = factsFromTrip(trip);
-      setCurrentPreferences((prev) => ({ ...prev, ...facts }));
+      setCurrentPreferences((prev) => ({ ...prev, ...(trip.preferences ?? {}), ...facts }));
       setCurrentItinerary(upgradeItinerary(trip.itinerary, facts));
       setCurrentTripId(trip.id);
       return trip;
@@ -167,9 +180,22 @@ export const TripProvider = ({ children }) => {
     }
   }, []);
 
+  // Trips belong to the logged-in user: reload on login, clear everything on logout / user switch.
+  const previousUserId = useRef(null);
   useEffect(() => {
-    fetchTrips();
-  }, [fetchTrips]);
+    const userId = user?.id ?? null;
+    const previous = previousUserId.current;
+    previousUserId.current = userId;
+    if (previous && previous !== userId) {
+      setSavedTrips([]);
+      setCurrentItinerary(null);
+      setCurrentTripId(null);
+      setCurrentPreferences(makeDefaultPreferences());
+      setError(null);
+    }
+    // (Guest → login keeps the wizard values the guest already typed.)
+    if (userId) fetchTrips();
+  }, [user?.id, fetchTrips]);
 
   return (
     <TripContext.Provider

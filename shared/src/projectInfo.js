@@ -27,9 +27,10 @@ export const projectInfo = Object.freeze({
     'React 18 + Vite',
     'Tailwind CSS',
     'Node.js + Express',
+    'MongoDB Atlas + Mongoose',
+    'JWT + bcrypt login',
     'Google Gemini AI',
     'Leaflet + OpenStreetMap',
-    'MySQL (optional) + local JSON store',
   ]),
 });
 

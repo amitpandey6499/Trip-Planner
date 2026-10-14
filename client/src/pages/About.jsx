@@ -9,11 +9,17 @@ const architecture = [
   },
   {
     title: 'Backend API Layer',
-    items: ['Node.js + Express 5 REST API', 'Google Gemini AI (offline sample mode without a key)', 'Central config with validated environment variables', 'Helmet security headers and rate limiting', 'Consistent JSON errors with proper HTTP status codes'],
+    items: [
+      'Node.js + Express 5 REST API',
+      'JWT login in an httpOnly cookie, bcrypt password hashing',
+      'Google Gemini AI (offline sample mode without a key)',
+      'Shared Zod schemas: same validation in browser and server',
+      'Helmet security headers and rate limiting',
+    ],
   },
   {
     title: 'Data Layer',
-    items: ['MySQL schema (optional)', 'Local JSON store when MySQL is not running', 'MongoDB Atlas migration planned (roadmap Part 3)'],
+    items: ['MongoDB Atlas (cloud database) with Mongoose models', 'Users, trips (with itinerary) and contact messages', 'Every trip query is limited to its owner', 'Itineraries validated and normalized before saving'],
   },
   {
     title: 'Location Data',

@@ -1,31 +1,43 @@
+import { findUserById } from '../services/authService.js';
+import { clearSessionCookie, readSessionToken, verifySession } from '../utils/authToken.js';
+import { ApiError } from '../utils/ApiError.js';
+
 /**
- * AUTH SEAM (temporary, Parts 1-3)
- * ---------------------------------
- * Controllers only rely on ONE contract:  req.user = { id, email, name, avatarUrl }
- *
- * Until real login arrives in Part 4, every request acts as the seeded demo user.
- * Part 4 replaces ONLY the bodies of these two functions with JWT verification;
- * no controller has to change.
- *
- * Note: request headers such as `x-user-id` are deliberately ignored. Trusting them
- * let anyone read or change another user's trips.
+ * AUTH (Part 4) — real JWT sessions.
+ * Contract kept from Part 1: controllers only use  req.user = { id, name, email, role, ... }.
  */
-const DEMO_USER = Object.freeze({
-  id: 'user_demo_123',
-  email: 'demo@tripplanner.com',
-  name: 'Aarav Sharma',
-  avatarUrl: 'https://api.dicebear.com/9.x/initials/svg?seed=Aarav%20Sharma',
-  isDemo: true,
-});
 
-/** Route needs a logged-in user. */
-export const requireAuth = (req, _res, next) => {
-  req.user = DEMO_USER;
-  next();
+const resolveUser = async (req, res) => {
+  const token = readSessionToken(req);
+  if (!token) return null;
+  const userId = verifySession(token);
+  const user = userId ? await findUserById(userId) : null;
+  if (!user) clearSessionCookie(res); // expired / tampered token or deleted account
+  return user;
 };
 
-/** Route works with or without a user (req.user may be null after Part 4). */
-export const optionalAuth = (req, _res, next) => {
-  req.user = DEMO_USER;
-  next();
+/** Route needs a logged-in user → 401 otherwise. */
+export const requireAuth = async (req, res, next) => {
+  try {
+    const user = await resolveUser(req, res);
+    if (!user) return next(ApiError.unauthorized('Please log in to continue.'));
+    req.user = user;
+    return next();
+  } catch (err) {
+    return next(err);
+  }
 };
+
+/** Route works for guests too: req.user is the user or null. */
+export const optionalAuth = async (req, res, next) => {
+  try {
+    req.user = await resolveUser(req, res);
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+};
+
+/** Use after requireAuth. */
+export const requireRole = (role) => (req, _res, next) =>
+  req.user?.role === role ? next() : next(ApiError.forbidden());

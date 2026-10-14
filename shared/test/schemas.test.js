@@ -89,3 +89,19 @@ test('auth schemas', () => {
   assert.equal(validate(RegisterSchema, { name: 'Rahul', email: 'a@b.co', password: 'lettersonly' }).fields.password, 'Password must contain a number.');
   assert.equal(validate(LoginSchema, { email: 'a@b.co' }).fields.password, 'Password is required.');
 });
+
+test('contact form schema', async () => {
+  const { ContactSchema } = await import('../src/index.js');
+  assert.equal(validate(ContactSchema, { name: 'Rahul', email: 'r@x.in', message: 'Hello there, nice app!' }).success, true);
+  assert.equal(validate(ContactSchema, { name: 'Rahul', email: 'r@x.in', message: 'short' }).fields.message, 'Message must be at least 10 characters.');
+});
+
+test('save trip keeps style preferences', () => {
+  const r = validate(SaveTripSchema, {
+    tripData: { destination: 'Goa', startDate: '2026-12-01', endDate: '2026-12-03', travelersCount: 2, totalBudget: 9000 },
+    preferences: { interests: ['Beaches'], travelStyle: 'Relaxed', hack: 1 },
+  });
+  assert.deepEqual(r.data.preferences.interests, ['Beaches']);
+  assert.equal(r.data.preferences.travelStyle, 'Relaxed');
+  assert.equal(r.data.preferences.hack, undefined);
+});

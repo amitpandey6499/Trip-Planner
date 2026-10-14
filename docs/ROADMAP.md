@@ -18,8 +18,8 @@
 |---|------|-----------|--------|
 | 1 | Foundation & cleanup | — | ✅ Done |
 | 2 | Shared contracts (data shape) | 1 | ✅ Done |
-| 3 | MongoDB Atlas + models | 2 | ⬜ |
-| 4 | JWT Authentication | 3 | ⬜ |
+| 3 | MongoDB Atlas + models | 2 | ✅ Done |
+| 4 | JWT Authentication | 3 | ✅ Done |
 | 5 | Trips CRUD + URL by trip id | 4 | ⬜ |
 | 6 | Real Gemini AI | 2, 5 | ⬜ |
 | 7 | Deploy v1 (live URL) + CI | 6 | ⬜ |
@@ -64,7 +64,7 @@
 - [ ] Home → Create Trip → itinerary dikhe
 - [ ] Save → My Trips mein dikhe → View → Delete
 - [ ] Explore, Hotels, Restaurants, Map, Profile pages khulein, browser console mein error nahi
-- [ ] (Part 4 ke baad) Signup → Logout → Login → sirf apne trips dikhein
+- [ ] Signup → Logout → Login → sirf apne trips dikhein; doosra user kuch nahi dekh paata
 
 ---
 
@@ -107,26 +107,41 @@
 
 **Depends on:** 1 — **Affects:** 3, 5, 6, 12, 13
 
-### Part 3 — MongoDB Atlas + models
-- Atlas free cluster setup guide (aapko account banana hai), `MONGODB_URI` in `.env`.
-- Models: `User`, `Trip` (preferences + itinerary embedded + `schemaVersion`), `AiCache`, `ContactMessage`.
-- `config/db.js` → Mongoose connect (retry + clear error). JSON-file store aur MySQL code hataya.
-- `POST /api/contact` → Contact form ke messages DB mein save (abhi form sirf "Message Received" dikhata hai).
-- Seed script: demo user + sample trips.
-- **Needs from you:** MongoDB Atlas account (free) — steps diye jaayenge.
-- **Affects:** 4, 5, 10, 15, 17
+### Part 3 — MongoDB Atlas + models ✅
+**Kya kiya** (setup: `docs/SETUP_MONGODB.md`)
+- Mongoose models: `User`, `Trip` (facts + `preferences` + normalized `itinerary` + `schemaVersion`), `ContactMessage`.
+- `config/db.js`: connect + saaf hint (DNS/SRV, galat password, IP access list).
+- `services/tripService.js`: **har query mein `owner`** → doosre ka trip na dikhe, na badle, na delete ho. Galat id = 404 (500 nahi).
+- Trip ke saath style preferences save → Edit pe poora wizard wapas (Part 5 ka kaam pehle hi).
+- Trip ki dates badlo to itinerary ke din bhi shift; din ki ginti badalni ho to "Regenerate" (itinerary mismatch nahi hota).
+- `POST /api/contact` → Contact form ke messages DB mein.
+- Demo account + sample trip server start pe apne-aap (`npm run seed -w server -- --reset` se reset).
+- MySQL, `database/` folder, JSON-file store poore hata diye.
+- (`AiCache` model Part 6 mein, jahan uska use hai.)
 
-### Part 4 — JWT Authentication
-- Server: `/api/auth/register`, `/login`, `/logout`, `/me`; bcrypt hash; JWT in **httpOnly cookie**; login rate-limit.
-- `requireAuth` middleware ab asli (Part 1 wala seam). Har trip query mein `owner = req.user.id` (doosre ka data access impossible).
-- Client: Signup/Login forms (validation), AuthContext rewrite, ProtectedRoute asli, Logout sach mein logout, Profile real data.
-- Fake "Continue with Google" aur auto-demo-login hataye. (Optional "Demo account" button = asli seeded user se login.)
-- **Affects:** 5, 10, 15, 17
+**Depends on:** 2 — **Affects:** 4, 5, 10, 15, 17
+
+### Part 4 — JWT Authentication ✅
+**Kya kiya**
+- `POST /api/auth/register | login | demo | logout`, `GET /api/auth/me`.
+- Password **bcrypt** (10 rounds) hash; JWT (HS256) **httpOnly cookie** mein — JavaScript cookie padh hi nahi sakta.
+- "Keep me signed in" = 7 din, warna browser band hote hi logout.
+- Galat password aur anjaan email pe **same** message ("Invalid email or password.").
+- Login/register rate-limit (IP + email), JSON-only bodies (CSRF se bachaav), production mein strong `JWT_SECRET` zaroori.
+- `requireAuth` ab asli (Part 1 wala seam — controllers ko chhuna nahi pada).
+- Client: Login / Sign up page (shared schemas se validation), "Try the demo account", ProtectedRoute (login ke baad wapas usi page pe),
+  session expire → login page, Navbar avatar + Plan a Trip + Sign Out, Profile pe asli data, 404 page.
+- Guest quick search → login → wizard mein wahi values.
+- Fake "Continue with Google", auto-demo-login, localStorage token hata diye.
+- Tests: server 29 (auth 10, API + isolation 15), browser 41 checks.
+
+**Depends on:** 3 — **Affects:** 5, 10, 15, 17
 
 ### Part 5 — Trips CRUD + URL by trip id
-- Routes: `/trips/new` (wizard), `/trips/:id` (itinerary), `/trips/:id/edit`. Refresh pe trip gayab nahi.
-- Trip ke saath **poore preferences** (interests, pace, diet...) save, taaki Edit mein sab wapas aaye (abhi sirf dates/budget/travelers).
-- (Part 2 mein ho chuka: Save = update, Edit prefill, phase tabs.)
+- Routes: `/trips/new` (wizard), `/trips/:id` (itinerary), `/trips/:id/edit`. Refresh pe trip gayab nahi, link bookmark ho sakta hai.
+- Unsaved itinerary refresh pe na khoye (session storage draft).
+- My Trips: title rename inline, sort (date / budget).
+- (Pehle ho chuka: Save = update, Edit prefill + preferences (Part 2/3), phase tabs, ownership (Part 3).)
 - Server: validation, no mass-assignment (sirf allowed fields update), ownership check.
 - **Affects:** 6, 11–16
 
@@ -134,12 +149,12 @@
 - `@google/genai`, model `GEMINI_MODEL` env se, `responseSchema` (Part 2 schema se), Zod validation, 1 retry + timeout.
 - Prompt mein travel pace, stay type, diet, notes ka sahi use; costs "poore group ka total" (Part 2 convention).
 - AI na chale to **honest sample mode** (8 destinations ke curated plans, badge: "Sample plan — AI offline"), "Landmark 1A" jaisa fake data khatam.
-- Cache (same input → turant result), per-user daily limit, React ErrorBoundary.
+- `AiCache` model: same input → turant result. Per-user daily limit (login ab hai, Part 4). React ErrorBoundary.
 - **Needs from you:** Gemini API key (free, aistudio.google.com).
 - **Affects:** 7, 8, 9, 11, 13
 
 ### Part 7 — Deploy v1 + CI
-- Client → Vercel, Server → Render, DB → Atlas. Production env vars, CORS, cookies (secure, sameSite).
+- Client → Vercel, Server → Render, DB → Atlas. Production env vars, CORS, cookies (`COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`), `TRUST_PROXY=true`.
 - GitHub Actions: har push pe `npm run check`.
 - **Needs from you:** GitHub, Vercel, Render accounts (free).
 

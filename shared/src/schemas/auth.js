@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { requiredText } from './common.js';
 
-/** Used by Part 4 (JWT login). Defined now so the contract is fixed early. */
+/** JWT login (Part 4): POST /api/auth/register and /api/auth/login. */
 
 const email = z
   .string({ error: 'Email is required.' })
@@ -27,4 +27,6 @@ export const RegisterSchema = z.object({
 export const LoginSchema = z.object({
   email,
   password: z.string({ error: 'Password is required.' }).min(1, 'Password is required.').max(72),
+  // true → stay logged in for 7 days; false → logged out when the browser closes
+  rememberMe: z.boolean().default(true),
 });

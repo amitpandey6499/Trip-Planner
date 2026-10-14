@@ -4,6 +4,55 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Parts 3 + 4 — MongoDB Atlas + JWT login (tags `part-3`, `part-4`, ek hi commit)
+
+Dono parts ek saath maange gaye the aur ek doosre se jude hain (login ke bina user-wise data ka matlab nahi), isliye ek commit.
+
+### Pehli baar chalane ke liye
+1. `npm install` (mongoose, bcryptjs, jsonwebtoken, cookie-parser naye hain; mysql2 hata)
+2. **`docs/SETUP_MONGODB.md`** follow karke free Atlas cluster banao
+3. `server/.env` mein **`MONGODB_URI`** aur **`JWT_SECRET`** daalo (baaki `server/.env.example` dekho)
+4. `npm run dev` → terminal mein `[DB] Connected to MongoDB "tripplanner"`
+5. Browser: Sign up karo, ya **"Try the demo account"**
+
+**Naye env variables:** `MONGODB_URI` (zaroori), `JWT_SECRET` (production mein zaroori), `JWT_EXPIRES_DAYS`, `COOKIE_SAMESITE`, `COOKIE_SECURE`, `DEMO_LOGIN_ENABLED`, `AUTH_RATE_LIMIT_MAX`.
+**Hataye gaye:** `MYSQL_ENABLED`, `DB_HOST/USER/PASSWORD/NAME/PORT`, `STORE_FILE`.
+**Purana data:** pehle wale JSON-file trips migrate nahi hote (wo sirf demo data tha). Demo trip apne-aap ban jaata hai.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Koi bhi email/password se "login", data browser ke localStorage mein | asli account: bcrypt hash, JWT httpOnly cookie, server pe check |
+| Site khulte hi demo user mein auto-login, Logout ke baad refresh = phir login | guest guest hi rehta hai; Logout sach mein logout |
+| "Continue with Google" = hamesha "Priya Patel" | hataya (fake tha) |
+| Sab users ka ek hi data | har trip `owner` ke saath; doosre ka trip 404 |
+| Trips JSON file / MySQL (half) mein | MongoDB Atlas, Mongoose models |
+| Contact form kuch nahi bhejta tha | `POST /api/contact` → DB; validation + error dikhte hain |
+| Profile pe "Aarav Sharma" sab ke liye | asli naam, email, member since, trip count, demo badge |
+| Edit pe interests/pace wapas nahi aate the | trip ke saath preferences save hote hain |
+| Unknown URL pe khaali page | 404 page |
+
+### Naye files
+- `server/src/models/{User,Trip,ContactMessage,toJSON,index}.js`
+- `server/src/services/{tripService,authService,demoService}.js`, `server/src/utils/authToken.js`
+- `server/src/controllers/{authController,contactController}.js`, `server/src/routes/{authRoutes,contactRoutes}.js`
+- `server/scripts/{seed,test-db}.js`, `server/test/auth.test.js`
+- `shared/src/schemas/contact.js`
+- `client/src/components/Avatar.jsx`, `client/src/pages/NotFound.jsx`
+- `docs/SETUP_MONGODB.md`
+
+### Hataye gaye files
+- `server/database/` (schema.sql, seed.sql, seedRunner.js), purana `server/src/config/db.js` (JSON + MySQL)
+- `server/src/routes/userRoutes.js`, `server/src/controllers/userController.js` (ab `/api/auth/me`)
+
+### Doosre parts pe asar
+- **Part 5:** trip ownership + preferences save ho chuke; bacha hai URLs (`/trips/:id`).
+- **Part 6:** per-user AI limit ab possible (login hai); `AiCache` model wahin banega.
+- **Part 7 (deploy):** alag domains pe cookie ke liye `COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`, `TRUST_PROXY=true`.
+- **Part 17 (admin):** `User.role` (`user`/`admin`) aur `requireRole('admin')` pehle se hain.
+
+---
+
 ## Part 2 — Shared contracts (tag `part-2`)
 
 ### Chalane ke liye

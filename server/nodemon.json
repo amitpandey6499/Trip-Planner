@@ -1,6 +1,12 @@
 {
-  "watch": ["src", "../shared/src"],
+  "watch": [
+    "src",
+    "../shared/src"
+  ],
   "ext": "js,json",
-  "ignore": ["data/*", "src/data/tripsStore.json", "test/*"],
+  "ignore": [
+    "test/*",
+    "scripts/*"
+  ],
   "delay": 300
 }

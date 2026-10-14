@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { BUDGET_TIER_VALUES, LIMITS } from '../constants.js';
 import { calcDuration } from '../utils/dates.js';
 import { isoDate, requiredText, wholeNumber } from './common.js';
+import { StyleSchema } from './preferences.js';
 
 /**
  * Trip = the saved record (one row on "My Trips").
@@ -29,7 +30,12 @@ const checkTripDates = (data, ctx) => {
   }
 };
 
-/** Body of POST /api/trips → { tripData, itinerary } (itinerary is validated with ItinerarySchema separately). */
+/**
+ * Body of POST /api/trips → { tripData, preferences?, itinerary? }
+ *   tripData     the facts shown on "My Trips"
+ *   preferences  interests / pace / stay / diet / notes, so "Edit" can restore the whole wizard
+ *   itinerary    validated + normalized with normalizeItinerary on the server
+ */
 export const SaveTripSchema = z.object({
   tripData: z
     .object({
@@ -38,6 +44,7 @@ export const SaveTripSchema = z.object({
       title: tripFields.title.optional(),
     })
     .superRefine(checkTripDates),
+  preferences: StyleSchema.optional(),
   itinerary: z.unknown().optional(),
 });
 

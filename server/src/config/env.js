@@ -27,39 +27,52 @@ const secret = z
   .optional()
   .transform((value) => (isPlaceholder(value) ? '' : value));
 
-const envSchema = z.object({
-  NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
-  PORT: z.coerce.number().int().min(1).max(65535).default(5000),
-  CLIENT_URL: z.string().trim().default('http://localhost:5173'),
-  TRUST_PROXY: z
-    .enum(['true', 'false'])
-    .default('false')
-    .transform((v) => v === 'true'),
+const DEV_JWT_SECRET = 'dev-only-secret-do-not-use-in-production-0123456789';
 
-  // AI
-  GEMINI_API_KEY: secret,
-  GEMINI_MODEL: z.string().trim().min(1).default('gemini-3.8-flash'),
+const envSchema = z
+  .object({
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
+    PORT: z.coerce.number().int().min(1).max(65535).default(5000),
+    CLIENT_URL: z.string().trim().default('http://localhost:5173'),
+    TRUST_PROXY: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
 
-  // Places (optional)
-  GOOGLE_PLACES_API_KEY: secret,
+    // Database — MongoDB Atlas (see docs/SETUP_MONGODB.md) or a local MongoDB
+    MONGODB_URI: z.string().trim().default(''),
 
-  // Storage (MySQL is optional until Part 3 replaces it with MongoDB)
-  DB_HOST: z.string().default('localhost'),
-  DB_USER: z.string().default('root'),
-  DB_PASSWORD: z.string().default(''),
-  DB_NAME: z.string().default('tripplanner_db'),
-  DB_PORT: z.coerce.number().int().default(3306),
-  MYSQL_ENABLED: z
-    .enum(['true', 'false'])
-    .default('true')
-    .transform((v) => v === 'true'),
-  STORE_FILE: z.string().trim().default(path.join(serverRoot, 'data', 'tripsStore.json')),
+    // Login (JWT in an httpOnly cookie)
+    JWT_SECRET: z.string().trim().default(''),
+    JWT_EXPIRES_DAYS: z.coerce.number().int().min(1).max(90).default(7),
+    COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
+    COOKIE_SECURE: z.enum(['auto', 'true', 'false']).default('auto'),
+    DEMO_LOGIN_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
 
-  // Rate limiting
-  RATE_LIMIT_WINDOW_MIN: z.coerce.number().positive().default(15),
-  RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
-  AI_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
-});
+    // AI
+    GEMINI_API_KEY: secret,
+    GEMINI_MODEL: z.string().trim().min(1).default('gemini-3.8-flash'),
+
+    // Places (optional)
+    GOOGLE_PLACES_API_KEY: secret,
+
+    // Rate limiting
+    RATE_LIMIT_WINDOW_MIN: z.coerce.number().positive().default(15),
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+    AI_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
+    AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
+  })
+  .superRefine((env, ctx) => {
+    if (env.NODE_ENV === 'production' && env.JWT_SECRET.length < 32) {
+      ctx.addIssue({ code: 'custom', path: ['JWT_SECRET'], message: 'must be at least 32 random characters in production' });
+    }
+    if (env.COOKIE_SAMESITE === 'none' && env.COOKIE_SECURE === 'false') {
+      ctx.addIssue({ code: 'custom', path: ['COOKIE_SECURE'], message: 'must be true when COOKIE_SAMESITE=none (browsers require it)' });
+    }
+  });
 
 const parsed = envSchema.safeParse(process.env);
 
@@ -73,10 +86,11 @@ if (!parsed.success) {
 }
 
 const env = parsed.data;
+const isProd = env.NODE_ENV === 'production';
 
 export const config = Object.freeze({
   env: env.NODE_ENV,
-  isProd: env.NODE_ENV === 'production',
+  isProd,
   isDev: env.NODE_ENV === 'development',
   isTest: env.NODE_ENV === 'test',
   port: env.PORT,
@@ -84,21 +98,23 @@ export const config = Object.freeze({
     .map((url) => url.trim().replace(/\/$/, ''))
     .filter(Boolean),
   trustProxy: env.TRUST_PROXY,
+  mongoUri: env.MONGODB_URI,
+  auth: Object.freeze({
+    jwtSecret: env.JWT_SECRET || DEV_JWT_SECRET,
+    usingDevSecret: !env.JWT_SECRET,
+    expiresDays: env.JWT_EXPIRES_DAYS,
+    cookieName: 'tp_session',
+    cookieSameSite: env.COOKIE_SAMESITE,
+    cookieSecure: env.COOKIE_SECURE === 'auto' ? isProd : env.COOKIE_SECURE === 'true',
+    demoLoginEnabled: env.DEMO_LOGIN_ENABLED,
+  }),
   gemini: Object.freeze({ apiKey: env.GEMINI_API_KEY, model: env.GEMINI_MODEL }),
   googlePlacesKey: env.GOOGLE_PLACES_API_KEY,
-  mysql: Object.freeze({
-    enabled: env.MYSQL_ENABLED,
-    host: env.DB_HOST,
-    user: env.DB_USER,
-    password: env.DB_PASSWORD,
-    database: env.DB_NAME,
-    port: env.DB_PORT,
-  }),
-  storeFile: env.STORE_FILE,
   rateLimit: Object.freeze({
     windowMs: env.RATE_LIMIT_WINDOW_MIN * 60 * 1000,
     max: env.RATE_LIMIT_MAX,
     aiPerMinute: env.AI_RATE_LIMIT_PER_MIN,
+    authMax: env.AUTH_RATE_LIMIT_MAX,
   }),
 });
 
@@ -106,4 +122,5 @@ export const config = Object.freeze({
 export const serviceStatus = () => ({
   geminiAI: Boolean(config.gemini.apiKey),
   googlePlaces: Boolean(config.googlePlacesKey),
+  demoLogin: config.auth.demoLoginEnabled,
 });

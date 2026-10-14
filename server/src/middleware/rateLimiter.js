@@ -22,3 +22,15 @@ export const aiLimiter = rateLimit({
   skip: () => config.isTest,
   message: jsonMessage('AI generation limit reached. Please wait a minute before generating again.'),
 });
+
+/** Login / register: slows down password guessing. Counted per IP + email. */
+export const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: config.rateLimit.authMax,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: () => config.isTest,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => `${req.ip}|${String(req.body?.email ?? '').toLowerCase()}`,
+  message: jsonMessage('Too many login attempts. Please wait 15 minutes and try again.'),
+});
