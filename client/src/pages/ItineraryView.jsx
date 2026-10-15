@@ -13,7 +13,6 @@ import {
   Utensils,
   Map,
   PieChart,
-  ChevronRight,
   AlertTriangle,
   CheckCircle2,
   Plus,
@@ -24,6 +23,7 @@ import {
   Loader2,
   CloudSun,
   Navigation,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
@@ -32,7 +32,7 @@ import { useTrip } from '../context/TripContext';
 import { useTripFromUrl } from '../hooks/useTripFromUrl';
 import { PageLoader, TripNotFound } from '../components/PageState';
 import { useSystemStatus } from '../hooks/useSystemStatus';
-import DayTimeline from '../components/DayTimeline';
+import ItineraryBoard from '../components/editor/ItineraryBoard';
 import InteractiveMap from '../components/InteractiveMap';
 import HotelCard from '../components/HotelCard';
 import RestaurantCard from '../components/RestaurantCard';
@@ -111,8 +111,9 @@ const ItineraryPage = () => {
   const { status: systemStatus } = useSystemStatus();
   const aiOn = Boolean(systemStatus?.services?.geminiAI);
 
-  const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary' | 'map' | 'hotels' | 'restaurants' | 'cost'
+  const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary' | 'map' | 'hotels' | 'restaurants' | 'cost' | 'weather' | 'reach'
   const [selectedDayNumber, setSelectedDayNumber] = useState(1);
+  const [editing, setEditing] = useState(false); // Part 12: drag & drop editor on the Itinerary tab
   const [copied, setCopied] = useState(false);
   // "View on Map" from a stay / restaurant card: { kind: 'stay' | 'food', id, at }
   const [mapFocus, setMapFocus] = useState(null);
@@ -146,10 +147,15 @@ const ItineraryPage = () => {
     setActiveTab('map');
   };
 
-  // A new plan (or a different trip) starts at day 1.
+  // A new plan (or a different trip) starts at day 1, not in edit mode.
   useEffect(() => {
     setSelectedDayNumber(1);
+    setEditing(false);
   }, [generationId, currentTripId]);
+  // A whole new plan is being made: stop editing the old one.
+  useEffect(() => {
+    if (loading) setEditing(false);
+  }, [loading]);
 
   useEffect(() => {
     if (!generationId || generationId <= lastCelebratedGeneration) return;
@@ -202,6 +208,8 @@ const ItineraryPage = () => {
   const planStart = planPreferences?.startDate ?? currentItinerary.startDate;
   const datesInPast = !planStart || planStart < addDays(todayIso(), -LIMITS.PAST_DATE_GRACE_DAYS);
   const aiLeft = lastMeta?.ai ? lastMeta.ai.left : null;
+  // Hand edits wait while a plan / day is being made or a trip is loading.
+  const editBlocked = loading || dayLoading ? 'Please wait for the current plan to finish.' : tripLoading ? 'Please wait...' : null;
 
   const handleCopy = async () => {
     try {
@@ -265,7 +273,7 @@ const ItineraryPage = () => {
           >
             <span className="flex items-center gap-2 font-semibold">
               <AlertTriangle className="w-4 h-4 flex-shrink-0 text-blue-600" />
-              This is a new version of your saved trip. It is not saved yet.
+              This trip has changes that are not saved yet.
             </span>
             <div className="flex gap-2">
               <button
@@ -367,7 +375,7 @@ const ItineraryPage = () => {
                 title="Change destination, dates, budget or preferences"
               >
                 <Pencil className="w-4 h-4 text-slate-500" />
-                <span>Edit</span>
+                <span>Edit details</span>
               </Link>
 
               <button
@@ -440,89 +448,44 @@ const ItineraryPage = () => {
 
         {/* 3. TAB CONTENT */}
 
-        {/* TAB A: ITINERARY TIMELINE (Day Selector on left, timeline on right) */}
+        {/* TAB A: ITINERARY — days on the left, the open day on the right; Part 12: "Edit plan" = drag & drop editor */}
         {activeTab === 'itinerary' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            {/* Left Day Selector Sidebar (matching Screen 5) */}
-            <div className="lg:col-span-4 bg-white rounded-2xl p-4 sm:p-5 border border-slate-100 shadow-soft space-y-3 no-print">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
-                Trip Timeline Days
-              </span>
-
-              <div className="space-y-2">
-                {days.map((d) => {
-                  const isSelected = d.dayNumber === selectedDayNumber;
-
-                  return (
-                    <button
-                      key={d.dayNumber}
-                      onClick={() => setSelectedDayNumber(d.dayNumber)}
-                      className={`w-full text-left p-3.5 rounded-xl transition-all flex items-center justify-between ${
-                        isSelected
-                          ? 'bg-blue-50/90 text-blue-900 border-2 border-blue-600 shadow-xs'
-                          : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200/60'
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`w-7 h-7 rounded-full flex items-center justify-center font-extrabold text-xs ${
-                            isSelected ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'
-                          }`}
-                        >
-                          {d.dayNumber}
-                        </span>
-                        <div>
-                          <p className="font-bold text-xs sm:text-sm">Day {d.dayNumber}</p>
-                          <p className="text-[11px] text-slate-500 truncate max-w-[170px]">
-                            {d.date ? `${formatDate(d.date)} • ` : ''}{d.title}
-                          </p>
-                        </div>
-                      </div>
-
-                      <ChevronRight className={`w-4 h-4 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Quick Jump to Hotels & Map */}
-              <div className="pt-3 border-t border-slate-100 flex gap-2">
+          <div>
+            {!editing && (
+              <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 no-print">
+                <p className="text-xs text-slate-500">Want it your way? Change the order, move places to another day, add or remove them — the budget and the map follow.</p>
                 <button
-                  onClick={() => setActiveTab('map')}
-                  className="w-1/2 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1"
+                  type="button"
+                  onClick={() => setEditing(true)}
+                  disabled={Boolean(editBlocked)}
+                  title={editBlocked ?? 'Reorder, add, change or remove activities'}
+                  className="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl border border-blue-200 bg-white hover:bg-blue-50 text-blue-700 text-xs font-semibold shadow-xs disabled:opacity-60 flex-shrink-0"
                 >
-                  <Map className="w-3.5 h-3.5" />
-                  <span>View Map</span>
-                </button>
-                <button
-                  onClick={() => setActiveTab('hotels')}
-                  className="w-1/2 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1"
-                >
-                  <Bed className="w-3.5 h-3.5" />
-                  <span>Stays</span>
+                  <SlidersHorizontal className="w-4 h-4" /> Edit plan
                 </button>
               </div>
-            </div>
-
-            {/* Right Day Details Timeline */}
-            <div className="lg:col-span-8">
-              <DayTimeline
-                day={selectedDay}
-                weather={weatherByDate.get(selectedDay?.date)}
-                aiOn={aiOn}
-                onRegenerate={regenerateDay}
-                regenerating={dayLoading === selectedDay?.dayNumber}
-                regenerateBlocked={
-                  datesInPast
-                    ? 'These dates are in the past: change them with Edit first.'
-                    : loading || dayLoading
-                      ? 'Please wait for the current plan to finish.'
-                      : null
-                }
-              />
-            </div>
-
+            )}
+            <ItineraryBoard
+              itinerary={currentItinerary}
+              preferences={planPreferences}
+              selectedDayNumber={selectedDay?.dayNumber ?? 1}
+              onSelectDay={setSelectedDayNumber}
+              onShowTab={setActiveTab}
+              editing={editing && !editBlocked}
+              onStopEditing={() => setEditing(false)}
+              destinationFacts={destinationFacts}
+              timelineProps={{
+                weather: weatherByDate.get(selectedDay?.date),
+                aiOn,
+                onRegenerate: regenerateDay,
+                regenerating: dayLoading === selectedDay?.dayNumber,
+                regenerateBlocked: datesInPast
+                  ? 'These dates are in the past: change them with Edit details first.'
+                  : loading || dayLoading
+                    ? 'Please wait for the current plan to finish.'
+                    : null,
+              }}
+            />
           </div>
         )}
 

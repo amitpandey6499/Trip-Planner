@@ -1,11 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Clock, MapPin, IndianRupee, Lightbulb, Compass, RefreshCw, Loader2, Navigation, Car } from 'lucide-react';
-import { LIMITS, TRAVEL_STYLES, formatDate, formatDuration, formatINR, formatKm, mapStops } from '@tripplanner/shared';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { IndianRupee, RefreshCw, Loader2, Car, Plus } from 'lucide-react';
+import { LIMITS, TRAVEL_STYLES, formatDate, formatDuration, formatINR, formatKm, mapStops, timeOverlaps } from '@tripplanner/shared';
 import WeatherIcon from './travel/WeatherIcon';
+import ActivityCard from './ActivityCard';
+import SortableActivity from './editor/SortableActivity';
 
 /**
  * One day of the itinerary. Part 8: the drive between stops comes from the day's road route.
  * Part 9: "New plan for this day" re-plans only this day (optional pace + wish for the AI).
+ * Part 12: `editing` → drag to reorder (the DndContext is in ItineraryBoard), edit / remove / add, rename the day.
  */
 const RegeneratePanel = ({ day, aiOn, onSubmit, onClose }) => {
   const [pace, setPace] = useState('');
@@ -66,26 +70,71 @@ const RegeneratePanel = ({ day, aiOn, onSubmit, onClose }) => {
   );
 };
 
-export const DayTimeline = ({ day, weather = null, onRegenerate, regenerating = false, regenerateBlocked = null, aiOn = false }) => {
+/** Day title as a text box while editing: saved on Enter or when the box loses focus, Escape puts it back. */
+const DayTitleInput = ({ day, onRename }) => {
+  const [value, setValue] = useState(day.title);
+  const commit = () => {
+    const title = value.trim();
+    if (!title) return setValue(day.title);
+    if (title !== day.title) onRename(title);
+  };
+  return (
+    <input
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') e.currentTarget.blur();
+        if (e.key === 'Escape') {
+          setValue(day.title);
+          e.currentTarget.blur();
+        }
+      }}
+      maxLength={120}
+      aria-label={`Title of Day ${day.dayNumber}`}
+      className="w-full text-xl sm:text-2xl font-bold text-slate-900 bg-transparent border-b-2 border-dashed border-slate-300 focus:border-blue-500 focus:outline-none py-0.5"
+    />
+  );
+};
+
+export const DayTimeline = ({
+  day,
+  weather = null,
+  onRegenerate,
+  regenerating = false,
+  regenerateBlocked = null,
+  aiOn = false,
+  // Part 12 (edit mode)
+  editing = false,
+  routeUpdating = false,
+  onEditActivity,
+  onAddActivity,
+  onRemoveActivity,
+  onRenameDay,
+}) => {
   const [panelOpen, setPanelOpen] = useState(false);
 
   // Drive to the next stop, keyed by activity id (only when the route matches today's stops).
-  const { legAfter, route } = useMemo(() => {
+  const { legAfter, route, routeOutdated } = useMemo(() => {
     const stops = mapStops(day);
-    const r = day?.route && day.route.stopIds?.join() === stops.map((s) => s.id).join() && day.route.provider !== 'none' ? day.route : null;
+    const matches = day?.route && day.route.stopIds?.join() === stops.map((s) => s.id).join();
+    const r = matches && day.route.provider !== 'none' ? day.route : null;
     const legs = new Map();
     if (r) r.stopIds.forEach((id, i) => r.legs[i] && legs.set(id, r.legs[i]));
-    return { legAfter: legs, route: r };
+    return { legAfter: legs, route: r, routeOutdated: !matches && stops.length >= 2 };
   }, [day]);
+  const overlaps = useMemo(() => (editing ? timeOverlaps(day?.activities ?? []) : new Map()), [editing, day]);
 
   if (!day || !day.activities) {
     return <div className="bg-white rounded-2xl p-8 text-center text-slate-500 border border-slate-100">No activities scheduled for this day.</div>;
   }
   const estimated = route?.provider === 'estimate';
+  const full = day.activities.length >= LIMITS.MAX_ACTIVITIES_PER_DAY;
+  const canRemove = day.activities.length > 1;
 
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-soft relative">
+      <div className={`bg-white rounded-2xl p-5 sm:p-6 border shadow-soft relative ${editing ? 'border-blue-200 ring-1 ring-blue-100' : 'border-slate-100'}`}>
         {regenerating && (
           <div className="absolute inset-0 z-10 rounded-2xl bg-white/80 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2" role="status" data-testid="day-regenerating">
             <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
@@ -94,18 +143,18 @@ export const DayTimeline = ({ day, weather = null, onRegenerate, regenerating = 
         )}
 
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 border-b border-slate-100 pb-4">
-          <div>
+          <div className="flex-1 min-w-0">
             {day.date && (
               <p className="text-[11px] font-bold uppercase tracking-wider text-blue-600">
                 Day {day.dayNumber} • {formatDate(day.date)}
               </p>
             )}
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{day.title}</h2>
+            {editing ? <DayTitleInput key={`${day.dayNumber}:${day.title}`} day={day} onRename={onRenameDay} /> : <h2 className="text-xl sm:text-2xl font-bold text-slate-900">{day.title}</h2>}
             <p className="text-sm text-slate-500 mt-1">{day.description}</p>
           </div>
           <div className="flex flex-col items-start sm:items-end gap-2 flex-shrink-0">
             {day.estimatedDailyExpense > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100" data-testid="day-cost">
                 <IndianRupee className="w-3.5 h-3.5" />
                 <span>Est. Daily Cost: {formatINR(day.estimatedDailyExpense)}</span>
               </div>
@@ -133,7 +182,12 @@ export const DayTimeline = ({ day, weather = null, onRegenerate, regenerating = 
                 </span>
               </div>
             )}
-            {onRegenerate && !panelOpen && (
+            {!route && routeOutdated && routeUpdating && (
+              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold" role="status" data-testid="route-updating">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Updating the road route...
+              </div>
+            )}
+            {onRegenerate && !panelOpen && !editing && (
               <button
                 type="button"
                 onClick={() => setPanelOpen(true)}
@@ -147,7 +201,7 @@ export const DayTimeline = ({ day, weather = null, onRegenerate, regenerating = 
           </div>
         </div>
 
-        {panelOpen && (
+        {panelOpen && !editing && (
           <RegeneratePanel
             key={day.dayNumber}
             day={day}
@@ -160,78 +214,40 @@ export const DayTimeline = ({ day, weather = null, onRegenerate, regenerating = 
           />
         )}
 
-        <div className="relative mt-6 pl-4 sm:pl-6 border-l-2 border-blue-200 space-y-6 sm:space-y-8">
-          {day.activities.map((activity, index) => {
-            const leg = legAfter.get(String(activity.id));
-            return (
-              <div key={activity.id || index} className="relative group">
-                <div className="absolute -left-[25px] sm:-left-[33px] top-1.5 w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-white border-4 border-blue-600 flex items-center justify-center shadow-xs group-hover:scale-110 group-hover:border-indigo-600 transition-all">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-600"></div>
-                </div>
-
-                <div className="bg-slate-50/70 hover:bg-white rounded-2xl p-4 sm:p-5 border border-slate-200/80 hover:border-blue-200 hover:shadow-soft transition-all duration-200 flex flex-col md:flex-row gap-4 items-start">
-                  {activity.imageUrl && (
-                    <div className="w-full md:w-44 h-32 md:h-28 rounded-xl overflow-hidden flex-shrink-0 bg-slate-200">
-                      <img
-                        src={activity.imageUrl}
-                        alt={activity.placeName}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.target.style.display = 'none';
-                        }}
-                      />
-                    </div>
-                  )}
-
-                  <div className="flex-1 space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-100">
-                        <Clock className="w-3 h-3" />
-                        {activity.timeSlot || 'Flexible'}
-                      </span>
-                      {activity.cost > 0 && (
-                        <span className="text-xs font-semibold text-slate-700 bg-slate-200/70 px-2 py-0.5 rounded-md">{formatINR(activity.cost)} est.</span>
-                      )}
-                    </div>
-
-                    <h3 className="text-base sm:text-lg font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{activity.placeName}</h3>
-                    <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">{activity.description}</p>
-
-                    <div className="flex flex-wrap items-center gap-3 pt-1 text-[11px] text-slate-500 font-medium">
-                      {activity.estimatedDuration && (
-                        <span className="flex items-center gap-1">
-                          <Compass className="w-3.5 h-3.5 text-slate-400" />
-                          {activity.estimatedDuration}
-                        </span>
-                      )}
-                      {activity.category && (
-                        <span className="flex items-center gap-1">
-                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
-                          {activity.category}
-                        </span>
-                      )}
-                    </div>
-
-                    {activity.tips && (
-                      <div className="flex items-start gap-1.5 p-2.5 rounded-xl bg-amber-50/70 border border-amber-200/60 text-[11px] text-amber-800 font-medium mt-2">
-                        <Lightbulb className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <span>{activity.tips}</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {leg && (
-                  <p className="mt-2 ml-2 text-[11px] font-semibold text-slate-500 flex items-center gap-1.5" data-testid="timeline-leg">
-                    <Navigation className="w-3.5 h-3.5 text-slate-400 rotate-180" />
-                    {estimated ? '≈ ' : ''}
-                    {formatKm(leg.distanceKm)} • {formatDuration(leg.durationMin)} to the next stop{estimated ? ' (estimate)' : ''}
-                  </p>
-                )}
-              </div>
-            );
-          })}
+        <div className="relative mt-6 pl-4 sm:pl-6 border-l-2 border-blue-200 space-y-6 sm:space-y-8" data-testid="day-activities">
+          {editing ? (
+            <SortableContext items={day.activities.map((a) => String(a.id))} strategy={verticalListSortingStrategy}>
+              {day.activities.map((activity) => (
+                <SortableActivity
+                  key={activity.id}
+                  activity={activity}
+                  leg={legAfter.get(String(activity.id))}
+                  estimated={estimated}
+                  overlap={overlaps.get(String(activity.id))}
+                  canRemove={canRemove}
+                  onEdit={onEditActivity}
+                  onRemove={onRemoveActivity}
+                />
+              ))}
+            </SortableContext>
+          ) : (
+            day.activities.map((activity, index) => (
+              <ActivityCard key={activity.id || index} activity={activity} leg={legAfter.get(String(activity.id))} estimated={estimated} />
+            ))
+          )}
         </div>
+
+        {editing && (
+          <button
+            type="button"
+            onClick={() => onAddActivity(day.dayNumber)}
+            disabled={full}
+            title={full ? `A day can have at most ${LIMITS.MAX_ACTIVITIES_PER_DAY} activities.` : undefined}
+            className="no-print mt-6 w-full py-3 rounded-2xl border-2 border-dashed border-slate-300 hover:border-blue-400 hover:bg-blue-50/50 text-sm font-semibold text-slate-600 hover:text-blue-700 inline-flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:border-slate-300"
+          >
+            <Plus className="w-4 h-4" /> {full ? `Day ${day.dayNumber} is full` : `Add an activity to Day ${day.dayNumber}`}
+          </button>
+        )}
       </div>
     </div>
   );

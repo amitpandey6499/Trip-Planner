@@ -40,6 +40,8 @@ plan bana / trip khula ──► needsMapUpdate()?  (shared/src/utils/map.js)
             3. map:     { version, updatedAt, located, total, notice }
 ```
 
+- Offline (curated) plans ki jagahon ki position pehle se hoti hai — lookup nahi. Part 12: editor mein **haath se likhi** nayi jagah
+  (position ke bina) dhoondhi jaati hai; curated "idea" apni position saath laata hai. Sirf badle hue din ka route dobara.
 - Har din ka route `days[i].route` mein (`provider: osrm | estimate | none`, `signature` = stops ka fingerprint).
   Din badla (Regenerate day) → signature badla → sirf us din ka naya route.
 - Progress live aata hai (Server-Sent Events): "Finding places on the map (12/28)", "Road route for Day 2".

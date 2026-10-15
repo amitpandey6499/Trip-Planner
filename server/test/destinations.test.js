@@ -76,8 +76,11 @@ test('detail: offline destinations use the planner’s stays and eateries; other
   assert.equal(manali.body.data.stays[0].area, 'Mall Road / Old Manali');
   assert.ok(manali.body.data.eateries.length >= 3);
   assert.equal(manali.body.data.reach.airport.code, 'KUU');
+  const naggar = manali.body.data.places.find((p) => p.name.startsWith('Naggar Castle'));
+  assert.ok(naggar && naggar.feePerPerson > 0 && naggar.hours > 0 && Number.isFinite(naggar.lat), 'curated places = ideas for the editor (Part 12)');
 
   const leh = await request(app).get('/api/destinations/leh-ladakh').expect(200);
+  assert.deepEqual(leh.body.data.places, [], 'only the offline planner destinations have curated places');
   assert.equal(leh.body.data.reach.airport.code, 'IXL');
   assert.match(leh.body.data.notes.join(' '), /altitude/);
   await request(app).get('/api/destinations/atlantis').expect(404);

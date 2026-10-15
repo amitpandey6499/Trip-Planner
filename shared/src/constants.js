@@ -23,6 +23,9 @@ export const LIMITS = Object.freeze({
   // Part 8/9
   MAX_ROUTE_POINTS: 400, // points kept per day's road route (simplified line)
   MAX_DAY_NOTE_LENGTH: 300, // "make Day 3 more relaxed" note for Regenerate day
+  // Part 12 (editor)
+  MAX_ACTIVITIES_PER_DAY: 15,
+  MAX_ACTIVITY_COST: 1_000_000, // one activity, whole group (₹10 lakh)
 });
 
 export const INTERESTS = Object.freeze([

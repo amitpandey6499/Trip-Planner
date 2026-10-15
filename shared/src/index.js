@@ -13,6 +13,7 @@ export * from './utils/map.js';
 export * from './utils/links.js';
 export * from './utils/weather.js';
 export * from './utils/packing.js';
+export * from './utils/time.js';
 export * from './data/originCities.js';
 
 export * from './schemas/preferences.js';
@@ -24,3 +25,4 @@ export * from './schemas/requests.js';
 
 export * from './validation.js';
 export * from './itinerary/normalize.js';
+export * from './itinerary/edit.js';

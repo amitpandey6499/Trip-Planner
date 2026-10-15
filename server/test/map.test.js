@@ -1,7 +1,7 @@
 import test, { before, after, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
-import { addDays, mapStops, needsMapUpdate, todayIso } from '@tripplanner/shared';
+import { addDays, applyEdit, mapStops, needsMapUpdate, routeSignature, todayIso } from '@tripplanner/shared';
 import { startTestDb, stopTestDb } from '../scripts/test-db.js';
 
 const { default: app } = await import('../src/app.js');
@@ -269,4 +269,60 @@ test('bad input is rejected before any work starts', async () => {
   const bad = await agent.post('/api/map/enrich').send({ itinerary: { destination: 'Goa', days: [{ title: 'x', activities: [] }] } }).expect(400);
   assert.match(bad.body.error, /at least one activity/);
   await request(app).post('/api/map/enrich').send({ itinerary: aiItinerary() }).expect(401);
+});
+
+// ── Part 12: hand-edited plans ─────────────────────────────────────────────────────
+
+test('edited plan: only the new place is looked up and only changed days get a new route; save keeps the edits', async () => {
+  const { data, preferences } = await offlinePlan('Manali', 3);
+  const mapped = (await agent.post('/api/map/enrich').send({ itinerary: data }).expect(200)).body.data;
+  const sights = (day) => day.activities.map((a, i) => (a.category === 'Attraction' || a.category === 'Activity' ? i : -1)).filter((i) => i >= 0);
+  const swapDay = mapped.days.find((day) => sights(day).length >= 2);
+  assert.ok(swapDay, 'a day with two sights to swap');
+  const addDay = mapped.days.find((day) => day !== swapDay);
+  const untouched = mapped.days.find((day) => day !== swapDay && day !== addDay);
+  const [firstPlace, , ...rest] = sights(swapDay);
+  const lastPlace = rest.length ? rest.at(-1) : sights(swapDay)[1];
+
+  // Drag a sight to an earlier place on one day, add a place the user typed on another day, leave the third alone.
+  let edited = applyEdit(mapped, { type: 'move', fromDay: swapDay.dayNumber, activityId: swapDay.activities[lastPlace].id, toDay: swapDay.dayNumber, toIndex: firstPlace }, preferences);
+  edited = applyEdit(edited, { type: 'add', dayNumber: addDay.dayNumber, activity: { placeName: 'Jogini Waterfall', category: 'Attraction', timeSlot: '04:00 PM - 05:00 PM', cost: 300 } }, preferences);
+  assert.equal(edited.days[addDay.dayNumber - 1].activities.length, addDay.activities.length + 1);
+  assert.equal(edited.estimatedTotal, mapped.estimatedTotal + 300);
+
+  places = { 'jogini waterfall': [32.27, 77.19] };
+  calls = [];
+  const res = await agent.post('/api/map/enrich').send({ itinerary: edited }).expect(200);
+  const it = res.body.data;
+  const lookups = calls.filter((c) => c.host === 'nominatim.test');
+  assert.equal(lookups.length, 1, 'only the typed place is looked up (curated places keep their positions)');
+  assert.equal(new URL(lookups[0].url).searchParams.get('q'), 'Jogini Waterfall, Manali');
+  const added = it.days[addDay.dayNumber - 1].activities.find((a) => a.placeName === 'Jogini Waterfall');
+  assert.equal(added.locationSource, 'geocoded');
+  assert.deepEqual(added.coordinates, { lat: 32.27, lng: 77.19 });
+  assert.equal(calls.filter((c) => c.host === 'osrm.test').length, 2, 'new routes for the two changed days only');
+  assert.deepEqual(it.days[untouched.dayNumber - 1].route, untouched.route, 'the untouched day keeps its route');
+  for (const day of it.days) assert.equal(day.route.signature, routeSignature(mapStops(day)));
+
+  const saved = await agent.post('/api/trips').send({ tripData: { ...preferences, title: it.title }, itinerary: it }).expect(201);
+  const loaded = (await agent.get(`/api/trips/${saved.body.data.id}`).expect(200)).body.data.itinerary;
+  assert.deepEqual(loaded.days.map((d) => d.activities.map((a) => a.id)), it.days.map((d) => d.activities.map((a) => a.id)), 'order and ids kept');
+  assert.equal(loaded.estimatedTotal, edited.estimatedTotal);
+  assert.deepEqual(loaded.days.map((d) => d.estimatedDailyExpense), edited.days.map((d) => d.estimatedDailyExpense));
+  assert.equal(needsMapUpdate(loaded), false);
+});
+
+test('edited plan: a typed place the map can not find is kept but not drawn; an empty day is refused on save', async () => {
+  const { data, preferences } = await offlinePlan('Goa', 1);
+  const edited = applyEdit(data, { type: 'add', dayNumber: 1, activity: { placeName: 'Uncle Raju ka Shack', category: 'Restaurant' } }, preferences);
+  const it = (await agent.post('/api/map/enrich').send({ itinerary: edited }).expect(200)).body.data;
+  const place = it.days[0].activities.find((a) => a.placeName === 'Uncle Raju ka Shack');
+  assert.equal(place.locationSource, 'none');
+  assert.equal(place.coordinates, undefined);
+  assert.ok(!mapStops(it.days[0]).some((s) => s.id === place.id), 'not a stop on the route');
+
+  const empty = structuredClone(it);
+  empty.days[0].activities = [];
+  const bad = await agent.post('/api/trips').send({ tripData: { ...preferences, title: 'Goa' }, itinerary: empty }).expect(400);
+  assert.match(bad.body.error, /at least one activity/);
 });

@@ -15,7 +15,7 @@ server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 
 | Layer | Technology |
 | --- | --- |
-| Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap |
+| Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap, @dnd-kit (drag & drop editor) |
 | Maps | Nominatim (place positions) + OSRM (road routes), cached in MongoDB — see [docs/MAP_SERVICES.md](docs/MAP_SERVICES.md) |
 | Photos & weather | Wikipedia lead images (free licences, cached 30 days) · Open-Meteo forecast + archive ("typical" weather), CC BY 4.0 |
 | Live updates | Server-Sent Events (generation progress, map progress) |
@@ -95,7 +95,7 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | --- | --- |
 | `/trips/new` | Trip wizard (4 steps) |
 | `/itinerary` | A new plan that is not saved yet (survives a refresh in the same tab) |
-| `/trips/:id` | A saved trip — can be refreshed, bookmarked; "unsaved changes" banner after Regenerate / a new day plan |
+| `/trips/:id` | A saved trip — can be refreshed, bookmarked; "unsaved changes" banner after Regenerate / a new day plan / hand edits |
 | `/map` | The open trip on the map (road routes, stays, restaurants) |
 | `/trips/:id/edit` | Edit a saved trip's preferences and regenerate it |
 | `/my-trips` | Saved trips: Upcoming / Ongoing / Past tabs, search, sort, rename |
@@ -104,7 +104,8 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | `/hotels?destination=&budget=` | Where to stay: areas with typical prices per tier + Booking.com / Google Maps search links |
 | `/restaurants?destination=&veg=1` | Where to eat, pure-veg filter |
 
-Inside a trip: tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks) and **Getting there** (flight / train / bus / car from your city).
+Inside a trip: **Edit plan** (drag & drop activities inside a day or onto another day, add / edit / remove them, rename days,
+undo / redo — the budget and the road routes follow every change) and tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks) and **Getting there** (flight / train / bus / car from your city).
 
 ## Useful commands (run from the project root)
 

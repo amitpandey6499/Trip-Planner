@@ -65,7 +65,7 @@ export const DaySchema = z.object({
   title: z.string().trim().min(1).max(120).catch('Day plan'),
   description: shortText(500).default(''),
   estimatedDailyExpense: money.default(0),
-  activities: z.array(ActivitySchema).min(1, 'Every day needs at least one activity.').max(15),
+  activities: z.array(ActivitySchema).min(1, 'Every day needs at least one activity.').max(LIMITS.MAX_ACTIVITIES_PER_DAY),
   route: DayRouteSchema.optional().catch(undefined),
 });
 

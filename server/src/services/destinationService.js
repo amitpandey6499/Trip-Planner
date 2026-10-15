@@ -32,7 +32,7 @@ export const ensureDestinations = () => {
 /** The 8 offline-planner destinations take stays and eateries from the planner's data (one source of truth). */
 const offlineExtras = (doc) => {
   const offline = findOfflineDestination(doc.name);
-  if (!offline) return { offlinePlanner: false, stays: doc.stays ?? [], eateries: doc.eateries ?? [] };
+  if (!offline) return { offlinePlanner: false, stays: doc.stays ?? [], eateries: doc.eateries ?? [], places: [] };
   return {
     offlinePlanner: true,
     stays: offline.hubs.map((hub) => ({ area: hub.stayArea, lat: hub.lat, lng: hub.lng, prices: offline.stayPrices })),
@@ -47,6 +47,18 @@ const offlineExtras = (doc) => {
         lat: e.lat,
         lng: e.lng,
       })),
+    // Part 12: ideas for "Add an activity" (curated, with position, typical fee per person and time needed).
+    places: offline.places.map((p) => ({
+      name: p.name,
+      category: p.category,
+      hours: p.hours,
+      feePerPerson: p.fee ?? 0,
+      fullDay: Boolean(p.fullDay),
+      description: p.description,
+      tips: p.tips,
+      lat: p.lat,
+      lng: p.lng,
+    })),
   };
 };
 

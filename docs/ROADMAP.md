@@ -27,7 +27,7 @@
 | 9 | Streaming generation + regenerate one day | 6 | ✅ Done |
 | 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ✅ Done |
 | 11 | Weather + packing list + "How to reach" | 6, 8 | ✅ Done |
-| 12 | Itinerary editor (drag & drop) | 5, 8 | ⬜ |
+| 12 | Itinerary editor (drag & drop) | 5, 8 | ✅ Done |
 | 13 | AI Trip Chat | 6, 12 | ⬜ |
 | 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ⬜ |
 | 15 | Expense tracker + bill split | 4, 5 | ⬜ |
@@ -246,8 +246,27 @@ Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Pa
 
 **Depends on:** 6, 8 — **Affects:** 12, 13, 14
 
-### Part 12 — Itinerary editor
-- `@dnd-kit` drag & drop: activity reorder, add, edit, delete; budget + route auto update; save.
+### Part 12 — Itinerary editor ✅
+**Kya kiya**
+- Itinerary tab pe **"Edit plan"** → editor (header ka purana "Edit" ab **"Edit details"** hai: destination / dates / budget badalne ke liye).
+- **Drag & drop (`@dnd-kit`)**: ⠿ handle se activity upar-neeche (mouse, touch, keyboard: Space → ↑/↓ → Space).
+  Left mein kisi **din pe drop** → activity us din pe chali jaati hai (apne time pe). Screen reader ko jagah ke naam bole jaate hain.
+- **Time apne-aap:** kheenchi hui activity us activity ka time le leti hai jis pe drop hui (ya pichhli wali ke khatam hone pe shuru);
+  baad wali sirf tab aage khiskti hain jab takraayein — baaki din ka time same (lunch upar kiya to dinner 7:30 PM hi rehta hai).
+- **Add / Edit / Remove**: form (naam, type, din, start/end time, cost, duration, description, tip) — wahi Zod rules jo server pe.
+  **Ideas**: destination ki curated jagahein (map position, typical fee × log, time, tip ke saath — ek click mein form bhar jaata hai),
+  highlights, khaane ki jagahein. "Already in your plan on Day 1: ..." warning. Din ka title wahin edit.
+- **Budget live:** har badlaav pe din ka kharcha, trip estimate, "over budget", Cost Breakdown, packing list turant update
+  (shared `applyEdit` → `normalizeItinerary`). Toolbar mein "Est. ₹X of ₹Y".
+- **Route apne-aap:** badle hue din ka hi naya road route (~1.5 s baad, kai edits = ek update). Naye typed place map pe dhoondhe jaate hain
+  (offline plans mein bhi); curated idea ki position saath aati hai → koi lookup nahi.
+- **Undo / Redo** (30 steps; Ctrl+Z, Ctrl+Y / ⌘+Shift+Z) + har change ke toast mein **Undo**. Ek din mein 1–15 activities (khaali din nahi).
+- **Time overlap warning** ("Starts before X ends (11:00 AM)"). Saved trip edit → "This trip has changes that are not saved yet" →
+  Save changes / Discard. Save ke beech edit kiya to wo edit bachta hai.
+- Shared `shared/src/itinerary/edit.js` (move / add / update / remove / updateDay + `ItineraryEditSchema`) — **Part 13 ka AI chat yahi edits propose karega**.
+- Tests: shared edit + time (52 shared total), server 2 (edited plan: sirf naya place lookup, sirf badle din ka route, save), browser 11 + AI plan.
+
+**Depends on:** 5, 8 — **Affects:** 13, 14
 
 ### Part 13 — AI Trip Chat
 - "Day 2 relaxed kar do" → AI changes propose kare → preview (diff) → Apply.

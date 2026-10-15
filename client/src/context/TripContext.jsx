@@ -1,9 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { defaultTripDates, needsMapUpdate, normalizeItinerary } from '@tripplanner/shared';
+import { applyEdit, defaultTripDates, needsMapUpdate, normalizeItinerary } from '@tripplanner/shared';
 import { tripApi } from '../services/api.js';
 import { useAuth } from './AuthContext';
 
 const TripContext = createContext(null);
+
+// Part 12: how many steps Undo can go back, and how long the map waits after an edit (several quick edits = one update).
+const MAX_UNDO = 30;
+const EDIT_MAP_DELAY_MS = 1500;
+const MAP_DELAY_MS = 300;
 
 /** Fresh wizard defaults (dates relative to today, so they never go stale). */
 export const makeDefaultPreferences = () => ({
@@ -114,14 +119,47 @@ export const TripProvider = ({ children }) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
+  // optional button in the toast, e.g. { label: 'Undo', onClick }
+  const [toastAction, setToastAction] = useState(null);
 
   useEffect(() => {
     if (!successToast) return undefined;
-    const timer = setTimeout(() => setSuccessToast(null), 4000);
+    const timer = setTimeout(() => {
+      setSuccessToast(null);
+      setToastAction(null);
+    }, toastAction ? 6000 : 4000);
     return () => clearTimeout(timer);
-  }, [successToast]);
+  }, [successToast, toastAction]);
 
-  const showToast = useCallback((message) => setSuccessToast(message), []);
+  const showToast = useCallback((message, action = null) => {
+    setSuccessToast(message);
+    setToastAction(action);
+  }, []);
+  const hideToast = useCallback(() => {
+    setSuccessToast(null);
+    setToastAction(null);
+  }, []);
+
+  // ── Part 12: undo / redo for hand edits (and day re-plans). Whole itineraries, newest last. ──
+  const history = useRef({ past: [], future: [] });
+  const [historySize, setHistorySize] = useState({ past: 0, future: 0 });
+  const syncHistory = useCallback(() => setHistorySize({ past: history.current.past.length, future: history.current.future.length }), []);
+  const resetHistory = useCallback(() => {
+    history.current = { past: [], future: [] };
+    syncHistory();
+  }, [syncHistory]);
+  const remember = useCallback(
+    (itinerary) => {
+      history.current.past = [...history.current.past, itinerary].slice(-MAX_UNDO);
+      history.current.future = [];
+      syncHistory();
+    },
+    [syncHistory],
+  );
+  // The map waits a little longer after an edit, so dragging several items makes one update.
+  const mapDelay = useRef(MAP_DELAY_MS);
+  // Counts hand edits (incl. undo / redo), so a save can tell whether the plan was edited while it was running.
+  const editSerial = useRef(0);
   const clearError = useCallback(() => setError(null), []);
 
   const fetchTrips = useCallback(async () => {
@@ -188,6 +226,7 @@ export const TripProvider = ({ children }) => {
         setIsDirty(true);
         setLastMeta(res.meta ?? null);
         setGenerationId((n) => n + 1);
+        resetHistory();
         bumpPlan();
         showToast(res.meta?.cached ? `Loaded a saved AI plan for ${res.data.destination}` : `Itinerary generated for ${res.data.destination}!`);
         return res.data;
@@ -206,7 +245,7 @@ export const TripProvider = ({ children }) => {
         }
       }
     },
-    [showToast, bumpPlan],
+    [showToast, bumpPlan, resetHistory],
   );
 
   /** Stop the running generation (the server stops asking the AI too). */
@@ -229,6 +268,7 @@ export const TripProvider = ({ children }) => {
           ...(pace && { pace }),
           ...(note?.trim() && { note: note.trim() }),
         });
+        remember(currentItinerary); // Undo brings the old day back
         setCurrentItinerary(res.data);
         setIsDirty(true);
         setLastMeta((m) => ({ ...(m ?? {}), cached: false, notice: res.meta?.notice ?? null, ai: res.meta?.ai ?? m?.ai ?? null }));
@@ -242,7 +282,7 @@ export const TripProvider = ({ children }) => {
         setDayLoading(null);
       }
     },
-    [currentItinerary, planPreferences, bumpPlan, showToast],
+    [currentItinerary, planPreferences, bumpPlan, showToast, remember],
   );
 
   /** Save (first time) or update (already saved) the current itinerary. Returns the saved trip. */
@@ -263,14 +303,19 @@ export const TripProvider = ({ children }) => {
         budgetCategory: p.budgetCategory,
         destinationImage: currentItinerary.destinationImage,
       };
-      const res = await tripApi.saveTrip({ tripData, preferences: stylePreferences(p), itinerary: currentItinerary });
+      const sent = currentItinerary;
+      const editsBefore = editSerial.current;
+      const res = await tripApi.saveTrip({ tripData, preferences: stylePreferences(p), itinerary: sent });
       if (!currentTripId && packingChecked.length) {
         tripApi.updateTrip(res.data.id, { packingChecked }).catch((err) => console.warn('Packing ticks not saved:', err.message));
       }
       setCurrentTripId(res.data.id);
-      setCurrentItinerary(res.data.itinerary ?? currentItinerary);
-      setIsDirty(false);
-      bumpPlan(); // a saved trip keeps its map with the trip (Part 8)
+      // Part 12: edited again while saving → keep the newer version on screen (still "not saved").
+      if (editSerial.current === editsBefore) {
+        setCurrentItinerary(res.data.itinerary ?? sent);
+        setIsDirty(false);
+        bumpPlan(); // a saved trip keeps its map with the trip (Part 8)
+      }
       showToast(currentTripId ? 'Trip updated!' : 'Trip successfully saved to your dashboard!');
       fetchTrips();
       return res.data;
@@ -292,6 +337,7 @@ export const TripProvider = ({ children }) => {
           setCurrentItinerary(null);
           setPlanPreferences(null);
           setIsDirty(false);
+          resetHistory();
           bumpPlan();
         }
         showToast('Trip deleted successfully');
@@ -299,7 +345,7 @@ export const TripProvider = ({ children }) => {
         setError(`Failed to delete trip: ${err.message}`);
       }
     },
-    [currentTripId, showToast, bumpPlan],
+    [currentTripId, showToast, bumpPlan, resetHistory],
   );
 
   /** Rename a saved trip (PUT /api/trips/:id { title }). Throws on failure. */
@@ -328,6 +374,7 @@ export const TripProvider = ({ children }) => {
       setPackingChecked(trip.packingChecked ?? []);
       setIsDirty(false);
       setLastMeta(null);
+      resetHistory();
       bumpPlan();
       return trip;
     } catch (err) {
@@ -336,7 +383,7 @@ export const TripProvider = ({ children }) => {
     } finally {
       setTripLoading(false);
     }
-  }, [bumpPlan]);
+  }, [bumpPlan, resetHistory]);
 
   // Trips belong to the logged-in user: reload on login, clear everything on logout / user switch.
   const previousUserId = useRef(null);
@@ -371,9 +418,10 @@ export const TripProvider = ({ children }) => {
       }
       fetchTrips();
     }
+    resetHistory();
     bumpPlan();
     setDraftReady(Boolean(userId));
-  }, [user?.id, fetchTrips, bumpPlan]);
+  }, [user?.id, fetchTrips, bumpPlan, resetHistory]);
 
   // ── Part 8: put the open plan on the map (place positions + road routes) ──────────────
   // The newest values, for the async map update (it must not use the values of an old render).
@@ -433,7 +481,9 @@ export const TripProvider = ({ children }) => {
       setMapStatus({ state: 'done', notice: itinerary.map?.notice ?? null });
       return undefined;
     }
-    const timer = setTimeout(() => updateMap(), 300); // let the page show first
+    const delay = mapDelay.current;
+    mapDelay.current = MAP_DELAY_MS;
+    const timer = setTimeout(() => updateMap(), delay); // let the page show first (after an edit: wait for more edits)
     return () => clearTimeout(timer);
   }, [planRevision, draftReady, updateMap]);
 
@@ -455,6 +505,62 @@ export const TripProvider = ({ children }) => {
         : null,
     );
   }, [user?.id, draftReady, currentItinerary, planPreferences, currentPreferences, currentTripId, isDirty, lastMeta, packingChecked]);
+
+  // ── Part 12: edit the open itinerary by hand ─────────────────────────────
+  /** Show a changed itinerary: unsaved, other answers for the old version ignored, map updated a moment later. */
+  const showEdited = useCallback(
+    (next) => {
+      editSerial.current += 1;
+      setCurrentItinerary(next);
+      setIsDirty(true);
+      mapDelay.current = EDIT_MAP_DELAY_MS;
+      bumpPlan();
+    },
+    [bumpPlan],
+  );
+
+  /**
+   * Apply one edit or a list of edits (shared applyEdit: move / add / update / remove / updateDay) as ONE undo step.
+   * The budget is recalculated at once; changed days get a new road route a moment later.
+   * Returns { ok: true, changed } or { ok: false, error, field } (nothing is changed then).
+   */
+  const editItinerary = useCallback(
+    (edits) => {
+      const before = latest.current.currentItinerary;
+      if (!before) return { ok: false, error: 'No itinerary is open.' };
+      let next = before;
+      try {
+        for (const edit of Array.isArray(edits) ? edits : [edits]) next = applyEdit(next, edit, planPreferences ?? {});
+      } catch (err) {
+        return { ok: false, error: err.message, field: err.field ?? null };
+      }
+      if (next === before) return { ok: true, changed: false };
+      remember(before);
+      showEdited(next);
+      return { ok: true, changed: true };
+    },
+    [planPreferences, remember, showEdited],
+  );
+
+  const undoEdit = useCallback(() => {
+    const current = latest.current.currentItinerary;
+    const { past, future } = history.current;
+    if (!past.length || !current) return false;
+    history.current = { past: past.slice(0, -1), future: [...future, current] };
+    syncHistory();
+    showEdited(past.at(-1));
+    return true;
+  }, [showEdited, syncHistory]);
+
+  const redoEdit = useCallback(() => {
+    const current = latest.current.currentItinerary;
+    const { past, future } = history.current;
+    if (!future.length || !current) return false;
+    history.current = { past: [...past, current], future: future.slice(0, -1) };
+    syncHistory();
+    showEdited(future.at(-1));
+    return true;
+  }, [showEdited, syncHistory]);
 
   // ── Part 11: packing ticks and starting city ─────────────────────────────
   /** Tick / untick a packing item; a saved trip stores it (a moment later, so quick clicks make one request). */
@@ -514,7 +620,14 @@ export const TripProvider = ({ children }) => {
         error,
         clearError,
         successToast,
+        toastAction,
         showToast,
+        hideToast,
+        editItinerary,
+        undoEdit,
+        redoEdit,
+        canUndo: historySize.past > 0,
+        canRedo: historySize.future > 0,
         generateTrip,
         saveCurrentTrip,
         deleteTrip,

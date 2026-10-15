@@ -59,7 +59,7 @@ export const enrichItinerary = async (itinerary, { force = false, onProgress = (
     ...(it.restaurants ?? []).map((place) => ({ place, name: place.name })),
   ].filter(({ place }) => !place.locationSource);
 
-  const center = places.length && !curatedSource ? await destinationCenter(it, { lookups, signal }) : null;
+  const center = places.length ? await destinationCenter(it, { lookups, signal }) : null;
   const answers = new Map(); // same query once per run ("Lunch at X" and restaurant "X")
 
   for (const [index, entry] of places.entries()) {
@@ -67,9 +67,10 @@ export const enrichItinerary = async (itinerary, { force = false, onProgress = (
     const { place } = entry;
     const hasPosition = valid(place.coordinates);
 
-    if (curatedSource) {
-      place.locationSource = hasPosition ? 'curated' : 'none';
-      stats[hasPosition ? 'curated' : 'unplaced'] += 1;
+    // Curated plans: their places come with a position. A place without one was added in the editor (Part 12): look it up.
+    if (curatedSource && hasPosition) {
+      place.locationSource = 'curated';
+      stats.curated += 1;
       continue;
     }
 

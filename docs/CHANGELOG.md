@@ -4,6 +4,61 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Part 12 — Itinerary editor: drag & drop, add / edit / remove, undo (tag `part-12`)
+
+### Chalane ke liye
+1. `npm install` (naye packages: `@dnd-kit/core`, `@dnd-kit/sortable`, `@dnd-kit/utilities`)
+2. `npm run dev` → koi trip kholo → Itinerary tab → **Edit plan**
+3. ⠿ se kheencho (ya Tab se handle pe aao → Space → ↑/↓ → Space), left mein kisi din pe chhodo, **+ Add an activity**, ✏️ / 🗑️,
+   din ka title badlo, Ctrl+Z / Ctrl+Y → **Save Trip** / **Save changes**.
+
+Koi naya env variable nahi. Koi naya API endpoint nahi (save purane `POST /api/trips` se; server dobara validate karta hai).
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Plan pasand nahi → poora (ya ek din) dobara generate | **haath se badlo**: drag & drop, din badlo, add / edit / remove, din ka title |
+| Activity ka order / time fixed | drag → time apne-aap (sirf jo takraaye wo aage khiskta hai), overlap ki warning |
+| — | **Ideas**: curated jagahein (position, fee, time, tip ke saath), highlights, khaana; "already in your plan" |
+| Budget sirf generate pe | har badlaav pe din / trip estimate, over-budget, Cost Breakdown, packing list turant |
+| Map sirf naye plan pe | badla din → sirf uska naya route (~1.5 s baad); nayi typed jagah map pe dhoondhi jaati hai (offline plans mein bhi) |
+| Galti se kuch hata diya → wapas nahi | **Undo / Redo** (30 steps, Ctrl+Z / Ctrl+Y) + har toast mein Undo |
+| Header "Edit" (confusing) | "Edit details" (dates / budget) aur "Edit plan" (activities) alag |
+| Banner "This is a new version..." | "This trip has changes that are not saved yet." (regenerate aur haath ke edits dono) |
+
+### Naye files
+- `shared/src/itinerary/edit.js` (applyEdit, move / add / update / remove / updateDay, ItineraryEditSchema, ActivityInputSchema,
+  retimeAfterReorder, timeOverlaps), `shared/src/utils/time.js` (time slot text ↔ minutes), `shared/test/edit.test.js`
+- `client/src/components/ActivityCard.jsx` (view aur edit mode ek hi card),
+  `client/src/components/editor/{ItineraryBoard,SortableActivity,ActivityDialog,EditToolbar}.jsx`
+
+### Badle files (main)
+- `TripContext`: `editItinerary`, `undoEdit` / `redoEdit`, toast mein button (Undo), edit ke baad map 1.5 s ruk ke;
+  save ke beech edit hua to wo bachta hai ("not saved" rehta hai).
+- `DayTimeline`: edit mode (sortable list, din ka title, Add), "Updating the road route..." chip.
+- `mapService`: offline plan mein bina position wali (haath se likhi) jagah ab dhoondhi jaati hai.
+- Destination detail mein `places` (offline planner ki curated jagahein = Ideas). Offline planner shared `formatTimeSlot` use karta hai.
+
+### Data contract
+- Itinerary shape same (koi migration nahi). Naya `LIMITS.MAX_ACTIVITIES_PER_DAY` (15), `LIMITS.MAX_ACTIVITY_COST`. Naye activities ka id `u-xxxxxx`.
+- Poora edit format: `docs/CONTRACTS.md` → "Editing a plan".
+
+### Doosre parts pe asar
+- **Part 13 (AI chat):** AI `ItineraryEditSchema` wale edits propose karega → `applyEdit` se check + apply → Undo bhi wahi.
+- **Part 14 (share / PDF):** edit kiya hua plan hi share / export hoga.
+- **Part 16 (UI / Hindi):** editor ke text translate.
+
+### Tests
+- Shared **52** (naye: time slots, drag up / down / middle, lunch upar → dinner same, din badalna, add / update / remove, khaali / full din,
+  known position), server **84** (naye 2: edited plan → sirf typed jagah ka lookup, sirf badle 2 din ke route, save ke baad order / budget same;
+  na mili jagah map pe nahi, khaali din save pe 400).
+- Browser: editor ke 11 checks (mouse + keyboard drag, din pe drop, undo / redo, add with ideas + validation, overlap, remove + Undo,
+  rename, save + reload, Discard, phone size) + AI plan pe add / move / save; purane sab checks (Parts 2–11) dobara pass.
+- **Sach:** map services aur Gemini yahan fake the (same API). Drag & drop asli Chromium mein mouse aur keyboard se test hua;
+  phone pe touch se ek baar khud try kar lena.
+
+---
+
 ## Parts 10 + 11 — Destinations, photos, stays, favourites + Weather, packing list, how to reach (tags `part-10`, `part-11`, ek hi commit)
 
 Ek commit kyunki Part 11 ka mausam, packing list aur "how to reach" Part 10 ke destination data (center, terrain, airport / station) pe tike hain.

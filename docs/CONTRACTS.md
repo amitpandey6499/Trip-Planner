@@ -177,3 +177,24 @@ ticks trip pe: `PUT /api/trips/:id { packingChecked: string[] }` (max 200). Unsa
 ```
 - `from`: `ORIGIN_CITIES` (`shared/src/data/originCities.js`, 27 shehar + aliases) ya geocoder (tab sirf bus / car). Na mile → 404.
 - Times andaze hain (UI pe "≈"), koi fare nahi. Starting city trip pe: `PUT /api/trips/:id { originCity }` → `preferences.originCity`.
+
+## Editing a plan (Part 12)
+Sab client pe hota hai (koi naya endpoint nahi); save purane `POST /api/trips` (`tripData.id` ke saath) se, server phir `normalizeItinerary` chalata hai.
+```js
+applyEdit(itinerary, edit, preferences)   // shared/src/itinerary/edit.js — PURE: naya itinerary, purana nahi badalta
+edit = { type: 'move',      fromDay, activityId, toDay, toIndex? }       // toIndex nahi → apne time pe
+     | { type: 'add',       dayNumber, activity: ActivityInput, index? }  // index nahi → apne time pe, warna end mein
+     | { type: 'update',    dayNumber, activityId, changes: Partial<ActivityInput> }
+     | { type: 'remove',    dayNumber, activityId }
+     | { type: 'updateDay', dayNumber, changes: { title?, description? } }
+ActivityInput = { placeName, category, timeSlot?, estimatedDuration?, description?, cost? (₹, poore group ka), tips?, coordinates? }
+```
+- Galat edit → `ItineraryEditError { message, field }` (e.g. "Day 2 needs at least one activity", "Day 3 already has 15 activities").
+- Naya activity id `u-xxxxxx`. Naya naam → purani position / photo hat jaati hai (map naya dhoondhta hai). Routes nahi chhede jaate:
+  badle din ka `route.signature` match nahi karta → map service sirf us din ka route banata hai (Part 8).
+- Time slot text helpers: `parseTimeSlot("09:00 AM - 11:00 AM") → { start: 540, end: 660 }`, `formatTimeSlot`, `timeOverlaps(activities)`,
+  `retimeAfterReorder` (same-day drag), `sortActivitiesByTime` (time badla → sahi jagah).
+- Destination detail (`GET /api/destinations/:slug`) mein ab `places` (sirf 8 offline-planner destinations):
+  `[{ name, category, hours, feePerPerson, fullDay, description, tips, lat, lng }]` — editor ke "Ideas".
+- Client: `TripContext.editItinerary(edits)` (ek ya kai edits = ek Undo step) → `{ ok, changed } | { ok: false, error, field }`;
+  `undoEdit`, `redoEdit`, `canUndo`, `canRedo`. History naya plan / trip khulne pe saaf.

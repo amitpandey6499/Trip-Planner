@@ -1,3 +1,4 @@
+import { formatTimeSlot } from '@tripplanner/shared';
 import { OFFLINE_DESTINATION_NAMES, findOfflineDestination } from '../../data/offlineDestinations.js';
 
 /**
@@ -42,13 +43,7 @@ export const STAY_AMENITIES = {
 const TIERS = ['Budget', 'Moderate', 'Luxury'];
 
 // ── time helpers (minutes since midnight) ────────────────────────────────
-const clock = (minutes) => {
-  const h24 = Math.floor(minutes / 60) % 24;
-  const m = Math.round(minutes % 60);
-  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
-  return `${String(h12).padStart(2, '0')}:${String(m).padStart(2, '0')} ${h24 < 12 ? 'AM' : 'PM'}`;
-};
-const slot = (start, end) => `${clock(start)} - ${clock(end)}`;
+const slot = (start, end) => formatTimeSlot(start, end); // "09:00 AM - 11:00 AM" (shared, Part 12 reads it back)
 const durationLabel = (hours) => (hours === 1 ? '1 hour' : `${hours} hours`);
 const roundTo10 = (n) => Math.round(n / 10) * 10;
 const groups = (travelers) => Math.max(1, Math.ceil(travelers / 4)); // one cab per 4 people
