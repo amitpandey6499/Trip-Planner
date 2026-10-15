@@ -45,11 +45,12 @@ export const DestinationCard = ({ destination, onQuickView }) => {
           <Heart className={`w-4 h-4 transition-colors ${isFavorited ? 'fill-red-500 text-red-500' : ''}`} />
         </button>
 
-        {/* Rating Badge */}
-        <div className="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-white/95 backdrop-blur-xs flex items-center gap-1 shadow-xs text-xs font-bold text-slate-800">
-          <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-          <span>{destination.rating || 4.7}</span>
-        </div>
+        {destination.rating > 0 && (
+          <div className="absolute bottom-3 left-3 px-2 py-1 rounded-lg bg-white/95 backdrop-blur-xs flex items-center gap-1 shadow-xs text-xs font-bold text-slate-800">
+            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+            <span>{destination.rating}</span>
+          </div>
+        )}
       </div>
 
       {/* Content */}

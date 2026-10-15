@@ -74,3 +74,6 @@ Optional hain, isliye purane saved trips kabhi invalid nahi honge.
 - Draft = `sessionStorage['tripplanner:draft:<userId>']` = `{ itinerary, preferences, tripId, dirty, meta }` — sirf is tab ke liye, logout pe saaf.
 - `dirty = true` → Regenerate hua par save nahi: banner "Save changes / Discard changes".
 - Rename (`PUT { title }`) itinerary ka `title` bhi badalta hai.
+- Client state (TripContext): `planPreferences` = khule plan ki preferences (Save, Regenerate, Edit); `currentPreferences` = agle **naye** trip ke
+  wizard ki shuruaati values (Quick search, Explore). Dono kabhi mix nahi hote.
+- Offline planner ki destinations: `OFFLINE_PLANNER_DESTINATIONS` + `findOfflinePlannerDestination()` (`shared/`) — server planner aur wizard ka hint dono yahi.

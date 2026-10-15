@@ -87,6 +87,25 @@ export const POPULAR_DESTINATIONS = Object.freeze([
   Object.freeze({ value: 'Rishikesh', label: 'Rishikesh, Uttarakhand' }),
 ]);
 
+/**
+ * Destinations the OFFLINE planner knows (used when no Gemini key is set or the AI is unavailable).
+ * The server has the curated places for each; the client uses this list to warn early in the wizard.
+ * Matching (aliases, "Manali, Himachal Pradesh" ...) lives in utils/destinations.js.
+ */
+export const OFFLINE_PLANNER_DESTINATIONS = Object.freeze([
+  Object.freeze({ name: 'Manali', aliases: Object.freeze(['manali', 'old manali', 'kullu manali']) }),
+  Object.freeze({ name: 'Goa', aliases: Object.freeze(['goa', 'north goa', 'south goa', 'panaji', 'panjim', 'calangute', 'baga']) }),
+  Object.freeze({ name: 'Jaipur', aliases: Object.freeze(['jaipur', 'pink city']) }),
+  Object.freeze({ name: 'Udaipur', aliases: Object.freeze(['udaipur', 'city of lakes']) }),
+  Object.freeze({ name: 'Varanasi', aliases: Object.freeze(['varanasi', 'banaras', 'benaras', 'kashi']) }),
+  Object.freeze({ name: 'Kerala', aliases: Object.freeze(['kerala', 'munnar', 'alleppey', 'alappuzha', 'kerala (munnar & alleppey)']) }),
+  Object.freeze({
+    name: 'Andaman',
+    aliases: Object.freeze(['andaman', 'andaman & nicobar islands', 'andaman and nicobar', 'port blair', 'havelock', 'swaraj dweep']),
+  }),
+  Object.freeze({ name: 'Rishikesh', aliases: Object.freeze(['rishikesh', 'tapovan']) }),
+]);
+
 /** Trip phase is CALCULATED from dates (utils/dates.js → tripPhase), never stored. */
 export const TRIP_PHASES = Object.freeze(['Upcoming', 'Ongoing', 'Past']);
 

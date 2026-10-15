@@ -79,7 +79,12 @@ const writeDraft = (userId, draft) => {
 export const TripProvider = ({ children }) => {
   const { user } = useAuth();
   const [currentItinerary, setCurrentItinerary] = useState(null);
+  // Two different things on purpose:
+  //   currentPreferences = starting values for the NEXT new trip (Quick search / Explore / wizard fill these)
+  //   planPreferences    = the preferences the OPEN itinerary was made with (Save, Regenerate, Edit use these)
+  // Keeping them apart means "Plan Trip → Jaipur" on Explore can never change the Manali trip that is open.
   const [currentPreferences, setCurrentPreferences] = useState(makeDefaultPreferences);
+  const [planPreferences, setPlanPreferences] = useState(null);
   // id of the saved trip the current itinerary belongs to (null = not saved yet)
   const [currentTripId, setCurrentTripId] = useState(null);
   // true when the shown itinerary has changes that are not saved yet
@@ -131,6 +136,7 @@ export const TripProvider = ({ children }) => {
         const res = await tripApi.generate(preferences, { fresh });
         // The server returns validated preferences (endDate filled in, defaults applied).
         setCurrentPreferences(res.preferences ?? preferences);
+        setPlanPreferences(res.preferences ?? preferences);
         setCurrentItinerary(res.data);
         setCurrentTripId(tripId);
         setIsDirty(true);
@@ -154,7 +160,7 @@ export const TripProvider = ({ children }) => {
     try {
       setSaving(true);
       setError(null);
-      const p = currentPreferences;
+      const p = planPreferences ?? currentPreferences;
       const tripData = {
         ...(currentTripId && { id: currentTripId }),
         title: currentItinerary.title,
@@ -179,7 +185,7 @@ export const TripProvider = ({ children }) => {
     } finally {
       setSaving(false);
     }
-  }, [currentItinerary, currentPreferences, currentTripId, fetchTrips, showToast]);
+  }, [currentItinerary, planPreferences, currentPreferences, currentTripId, fetchTrips, showToast]);
 
   const deleteTrip = useCallback(
     async (id) => {
@@ -189,6 +195,7 @@ export const TripProvider = ({ children }) => {
         if (id === currentTripId) {
           setCurrentTripId(null);
           setCurrentItinerary(null);
+          setPlanPreferences(null);
           setIsDirty(false);
         }
         showToast('Trip deleted successfully');
@@ -211,7 +218,7 @@ export const TripProvider = ({ children }) => {
     [currentTripId, showToast],
   );
 
-  /** Load a saved trip (by URL id) into the itinerary view and refill the wizard with its data. */
+  /** Load a saved trip (by URL id). Its preferences become planPreferences (used by Edit / Regenerate / Save). */
   const loadTripById = useCallback(async (id) => {
     try {
       setTripLoading(true);
@@ -219,7 +226,7 @@ export const TripProvider = ({ children }) => {
       const res = await tripApi.getTripById(id);
       const trip = res.data;
       const facts = factsFromTrip(trip);
-      setCurrentPreferences((prev) => ({ ...prev, ...(trip.preferences ?? {}), ...facts }));
+      setPlanPreferences({ ...makeDefaultPreferences(), ...(trip.preferences ?? {}), ...facts });
       setCurrentItinerary(upgradeItinerary(trip.itinerary, facts));
       setCurrentTripId(trip.id);
       setIsDirty(false);
@@ -244,6 +251,7 @@ export const TripProvider = ({ children }) => {
       writeDraft(previous, null);
       setSavedTrips([]);
       setCurrentItinerary(null);
+      setPlanPreferences(null);
       setCurrentTripId(null);
       setIsDirty(false);
       setLastMeta(null);
@@ -251,11 +259,12 @@ export const TripProvider = ({ children }) => {
       setError(null);
     }
     if (userId) {
-      // (Guest → login keeps the wizard values the guest already typed.)
       const draft = readDraft(userId);
       if (draft?.itinerary) {
         setCurrentItinerary(draft.itinerary);
-        setCurrentPreferences((prev) => ({ ...prev, ...draft.preferences }));
+        setPlanPreferences({ ...makeDefaultPreferences(), ...draft.preferences });
+        // Guest → login keeps the wizard values the guest already typed; a refresh gets them back from the draft.
+        setCurrentPreferences((prev) => (prev.destination ? prev : { ...prev, ...(draft.seed ?? draft.preferences) }));
         setCurrentTripId(draft.tripId ?? null);
         setIsDirty(Boolean(draft.dirty));
         setLastMeta(draft.meta ?? null);
@@ -271,10 +280,17 @@ export const TripProvider = ({ children }) => {
     writeDraft(
       user.id,
       currentItinerary
-        ? { itinerary: currentItinerary, preferences: currentPreferences, tripId: currentTripId, dirty: isDirty, meta: lastMeta }
+        ? {
+            itinerary: currentItinerary,
+            preferences: planPreferences,
+            seed: currentPreferences,
+            tripId: currentTripId,
+            dirty: isDirty,
+            meta: lastMeta,
+          }
         : null,
     );
-  }, [user?.id, draftReady, currentItinerary, currentPreferences, currentTripId, isDirty, lastMeta]);
+  }, [user?.id, draftReady, currentItinerary, planPreferences, currentPreferences, currentTripId, isDirty, lastMeta]);
 
   return (
     <TripContext.Provider
@@ -283,6 +299,7 @@ export const TripProvider = ({ children }) => {
         setCurrentItinerary,
         currentPreferences,
         setCurrentPreferences,
+        planPreferences,
         currentTripId,
         isDirty,
         lastMeta,

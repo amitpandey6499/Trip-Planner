@@ -7,6 +7,8 @@
  *   All prices are rough estimates and are shown as "est." in the app.
  * - Eateries with `generic: true` describe a type of meal, not a specific restaurant.
  *
+ * Names + aliases live in shared (OFFLINE_PLANNER_DESTINATIONS) so the wizard can warn early.
+ *
  * Place fields:
  *   hub        which base the place is near (multi-base trips like Kerala / Andaman)
  *   zone       neighbourhood; places in the same zone are planned on the same day
@@ -15,6 +17,7 @@
  *   fullDay    excursion that needs a whole day
  *   tags       which wizard interests it matches (shared INTERESTS)
  */
+import { findOfflinePlannerDestination } from '@tripplanner/shared';
 
 const place = (name, data) => ({ name, hub: 'main', best: 'any', fee: 0, category: 'Attraction', tags: [], ...data });
 const eat = (name, data) => ({ name, hub: 'main', veg: false, vegOptions: true, ...data });
@@ -23,7 +26,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'manali',
     name: 'Manali',
-    aliases: ['manali', 'old manali', 'kullu manali'],
     region: 'Himachal Pradesh',
     image: 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1200&q=80',
     hubs: [{ id: 'main', name: 'Manali', stayArea: 'Mall Road / Old Manali', lat: 32.2432, lng: 77.1892 }],
@@ -51,7 +53,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'goa',
     name: 'Goa',
-    aliases: ['goa', 'north goa', 'south goa', 'panaji', 'panjim', 'calangute', 'baga'],
     region: 'Goa',
     image: 'https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1200&q=80',
     hubs: [{ id: 'main', name: 'Goa', stayArea: 'Calangute / Baga (North Goa)', lat: 15.5439, lng: 73.7553 }],
@@ -84,7 +85,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'jaipur',
     name: 'Jaipur',
-    aliases: ['jaipur', 'pink city'],
     region: 'Rajasthan',
     image: 'https://images.unsplash.com/photo-1599661046289-e31897846e41?auto=format&fit=crop&w=1200&q=80',
     hubs: [{ id: 'main', name: 'Jaipur', stayArea: 'C-Scheme / MI Road', lat: 26.9124, lng: 75.7873 }],
@@ -116,7 +116,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'udaipur',
     name: 'Udaipur',
-    aliases: ['udaipur', 'city of lakes'],
     region: 'Rajasthan',
     image: 'https://images.unsplash.com/photo-1615836245337-f5b9b2303f10?auto=format&fit=crop&w=1200&q=80',
     hubs: [{ id: 'main', name: 'Udaipur', stayArea: 'Lal Ghat / Lake Pichola', lat: 24.5793, lng: 73.6831 }],
@@ -146,7 +145,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'varanasi',
     name: 'Varanasi',
-    aliases: ['varanasi', 'banaras', 'benaras', 'kashi'],
     region: 'Uttar Pradesh',
     image: 'https://images.unsplash.com/photo-1561361513-2d000a50f0dc?auto=format&fit=crop&w=1200&q=80',
     hubs: [{ id: 'main', name: 'Varanasi', stayArea: 'Dashashwamedh / Assi Ghat', lat: 25.3071, lng: 83.0104 }],
@@ -177,7 +175,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'kerala',
     name: 'Kerala',
-    aliases: ['kerala', 'munnar', 'alleppey', 'alappuzha', 'kerala (munnar & alleppey)'],
     region: 'Kerala (Munnar & Alleppey)',
     image: 'https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=1200&q=80',
     hubs: [
@@ -211,7 +208,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'andaman',
     name: 'Andaman',
-    aliases: ['andaman', 'andaman & nicobar islands', 'andaman and nicobar', 'port blair', 'havelock', 'swaraj dweep'],
     region: 'Andaman & Nicobar Islands',
     image: 'https://images.unsplash.com/photo-1589308078059-be1415eab4c3?auto=format&fit=crop&w=1200&q=80',
     hubs: [
@@ -244,7 +240,6 @@ export const OFFLINE_DESTINATIONS = [
   {
     key: 'rishikesh',
     name: 'Rishikesh',
-    aliases: ['rishikesh', 'tapovan'],
     region: 'Uttarakhand',
     image: 'https://images.unsplash.com/photo-1596761224213-9a4f4e70e4c6?auto=format&fit=crop&w=1200&q=80',
     note: 'Rishikesh is a vegetarian town: meat and alcohol are not served.',
@@ -272,21 +267,10 @@ export const OFFLINE_DESTINATIONS = [
   },
 ];
 
-const normalize = (text) =>
-  String(text ?? '')
-    .toLowerCase()
-    .replace(/[^a-z&()\s]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-
-/** Find curated data for a destination typed by the user ("Goa", "Panjim", "Kerala (Munnar & Alleppey)"). */
+/** Curated data for a destination typed by the user ("Goa", "Panjim", "Kerala (Munnar & Alleppey)"), or null. */
 export const findOfflineDestination = (destination) => {
-  const wanted = normalize(destination);
-  if (!wanted) return null;
-  return (
-    OFFLINE_DESTINATIONS.find((d) => d.aliases.some((alias) => normalize(alias) === wanted)) ??
-    OFFLINE_DESTINATIONS.find((d) => d.aliases.some((alias) => wanted.startsWith(`${normalize(alias)} `) || wanted.startsWith(`${normalize(alias)},`)))
-  );
+  const match = findOfflinePlannerDestination(destination);
+  return match ? OFFLINE_DESTINATIONS.find((d) => d.name === match.name) ?? null : null;
 };
 
 export const OFFLINE_DESTINATION_NAMES = OFFLINE_DESTINATIONS.map((d) => d.name);

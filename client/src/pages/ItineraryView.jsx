@@ -70,7 +70,7 @@ const ItineraryPage = () => {
   const navigate = useNavigate();
   const {
     currentItinerary,
-    currentPreferences,
+    planPreferences,
     currentTripId,
     isDirty,
     lastMeta,
@@ -137,8 +137,11 @@ const ItineraryPage = () => {
   const selectedDay = days.find((d) => d.dayNumber === selectedDayNumber) || days[0];
   const isSaved = Boolean(currentTripId);
   const editPath = isSaved ? `/trips/${currentTripId}/edit` : '/trips/new';
+  // An unsaved plan is edited in the "new trip" wizard, filled with THIS plan's preferences.
+  const editState = isSaved ? undefined : { fromPlan: true };
   // The server refuses plans that start in the past, so an old trip needs new dates first.
-  const datesInPast = !currentPreferences.startDate || currentPreferences.startDate < addDays(todayIso(), -LIMITS.PAST_DATE_GRACE_DAYS);
+  const planStart = planPreferences?.startDate ?? currentItinerary.startDate;
+  const datesInPast = !planStart || planStart < addDays(todayIso(), -LIMITS.PAST_DATE_GRACE_DAYS);
   const aiLeft = lastMeta?.ai ? lastMeta.ai.left : null;
 
   const handleCopy = async () => {
@@ -161,12 +164,13 @@ const ItineraryPage = () => {
   };
 
   const handleRegenerate = () => {
-    if (datesInPast) {
-      navigate(editPath);
+    if (datesInPast || !planPreferences) {
+      navigate(editPath, { state: editState });
       return;
     }
     // fresh: skip the AI cache. tripId: "Update Trip" then overwrites the saved trip (no duplicate).
-    generateTrip(currentPreferences, { tripId: currentTripId, fresh: true }).catch(() => {});
+    // planPreferences = what THIS plan was made with (not whatever the wizard was last filled with).
+    generateTrip(planPreferences, { tripId: currentTripId, fresh: true }).catch(() => {});
   };
 
   const handleDiscard = () => {
@@ -299,6 +303,7 @@ const ItineraryPage = () => {
 
               <Link
                 to={editPath}
+                state={editState}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
                 title="Change destination, dates, budget or preferences"
               >
@@ -463,10 +468,10 @@ const ItineraryPage = () => {
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
-                  Recommended Hotels in {currentItinerary.destination}
+                  Where to stay in {currentItinerary.destination}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Handpicked stays based on your budget and preferences
+                  Stays that fit your budget tier. Prices are estimates per room per night — check before booking.
                 </p>
               </div>
 
@@ -497,10 +502,10 @@ const ItineraryPage = () => {
             <div className="flex items-center justify-between border-b border-slate-200/80 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-slate-900">
-                  Top Restaurants in {currentItinerary.destination}
+                  Where to eat in {currentItinerary.destination}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Great food choices based on your taste and reviews
+                  Places to eat that match your food preference. Costs are estimates.
                 </p>
               </div>
 

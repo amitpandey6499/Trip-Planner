@@ -145,6 +145,8 @@
 - Save ke baad page apne-aap `/trips/:id` pe; button "Saved" / "Update Trip". Regenerate ke baad banner: **Save changes / Discard changes** (refresh ke baad bhi).
 - Itinerary page pe Edit button; purani dates wale trip pe Regenerate → pehle nayi dates (server past dates nahi leta).
 - My Trips: title **rename inline** (Enter/Esc), **sort** (newest / start date / budget), View/Edit URLs se.
+- Unsaved plan ke saath doosra trip kholo → "Discard unsaved changes?" dialog (delete wala dialog bhi same component).
+- Open trip ki preferences (`planPreferences`) aur naye trip ke wizard values (`currentPreferences`) alag — Explore / quick search kabhi khule trip ko nahi badalte.
 - Rename itinerary ka title bhi badalta hai (server).
 - React **ErrorBoundary** har page pe (ek page crash ho to poori app white nahi hoti), naye page pe scroll top, toast har page pe.
 - Fake data hataya: hotel/restaurant pe nakli 4.5★ rating, map pe "98 km / 3.5 hours" (ab stops se nikla straight-line distance), /map page pe "Solang Valley" default.
@@ -161,6 +163,7 @@
 - **Daily limit per user** (`AI_DAILY_LIMIT`, `AiUsage` model); Profile + itinerary page pe "x of y AI plans left today".
 - **Offline planner** (fake "Landmark 1A" generator ki jagah): 8 destinations (Manali, Goa, Jaipur, Udaipur, Varanasi, Kerala, Andaman, Rishikesh) ke **asli places** — timings, entry fee, area, veg/non-veg restaurants, travel pace, excursion days. Badge "Offline planner (curated places)".
 - Gemini fail ho (limit, galat key, model band, network) → offline planner + **notice kyun**. Destination offline mein bhi nahi → saaf error (422 / 503 / 429) supported list ke saath.
+- Key nahi to wizard **step 1 pe hi** batata hai ki kaun si 8 jagah chalengi (list + aliases `shared/` mein, server bhi wahi use karta hai). Quick search ka error wizard mein sahi field pe.
 - Error messages saaf: galat key, quota, model not found ("GEMINI_MODEL badlo"), network.
 - Tests: Gemini ka **fake client** (bina internet/key): sahi jawab, cache, retry, 2 galat jawab → offline, 429 retry nahi, model 404 hint, daily limit, per-user limit. Offline planner 576 combinations pe check.
 - **Needs from you:** Gemini API key (free): https://aistudio.google.com/apikey → `server/.env` → `GEMINI_API_KEY`.

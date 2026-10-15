@@ -43,7 +43,7 @@ export const RestaurantsView = () => {
               Top Restaurants in {destination}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
-              Great food choices based on your taste and reviews
+              Well-known places to eat. Costs are estimates.
             </p>
           </div>
 

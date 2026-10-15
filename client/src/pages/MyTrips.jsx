@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
   Plus,
@@ -10,12 +10,12 @@ import {
   Search,
   Clock,
   Sparkles,
-  AlertTriangle,
   Loader2
 } from 'lucide-react';
 import { formatDate, formatINR, tripPhase } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
 import TripTitle from '../components/TripTitle';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const TABS = ['Upcoming', 'Ongoing', 'Past', 'All'];
 const SORTS = {
@@ -31,12 +31,15 @@ const PHASE_STYLES = {
 
 export const MyTrips = () => {
   const navigate = useNavigate();
-  const { savedTrips, deleteTrip, renameTrip, tripsLoading } = useTrip();
+  const { savedTrips, deleteTrip, renameTrip, tripsLoading, currentItinerary, currentTripId, isDirty } = useTrip();
 
   const [activeTab, setActiveTab] = useState('Upcoming');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('newest');
   const [tripToDelete, setTripToDelete] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  // { path, title } of a trip the user wants to open while another plan has unsaved changes
+  const [pendingOpen, setPendingOpen] = useState(null);
 
   // Phase is calculated from the dates (shared tripPhase), so "Past" fills itself.
   const trips = savedTrips.map((trip) => ({ ...trip, phase: tripPhase(trip.startDate, trip.endDate) }));
@@ -50,14 +53,23 @@ export const MyTrips = () => {
   const countFor = (tab) => (tab === 'All' ? trips.length : trips.filter((t) => t.phase === tab).length);
 
   // Every trip has its own address (Part 5); the pages load the trip from the URL.
-  const handleView = (tripId) => navigate(`/trips/${tripId}`);
-  const handleEdit = (tripId) => navigate(`/trips/${tripId}/edit`);
+  // Only one plan is kept in memory, so opening ANOTHER trip would throw away unsaved changes: ask first.
+  const hasUnsavedPlan = Boolean(currentItinerary) && isDirty;
+  const open = (trip, path) => {
+    if (hasUnsavedPlan && trip.id !== currentTripId) setPendingOpen({ path, title: trip.title });
+    else navigate(path);
+  };
+  const handleView = (trip) => open(trip, `/trips/${trip.id}`);
+  const handleEdit = (trip) => open(trip, `/trips/${trip.id}/edit`);
+  const closePendingOpen = useCallback(() => setPendingOpen(null), []);
+  const closeDelete = useCallback(() => setTripToDelete(null), []);
 
   const confirmDelete = async () => {
-    if (tripToDelete) {
-      await deleteTrip(tripToDelete.id);
-      setTripToDelete(null);
-    }
+    if (!tripToDelete) return;
+    setDeleting(true);
+    await deleteTrip(tripToDelete.id);
+    setDeleting(false);
+    setTripToDelete(null);
   };
 
   return (
@@ -193,7 +205,7 @@ export const MyTrips = () => {
                 {/* Right Action Buttons matching Screen 9 */}
                 <div className="flex items-center gap-2 w-full md:w-auto justify-end pt-3 md:pt-0 border-t md:border-t-0 border-slate-100">
                   <button
-                    onClick={() => handleView(trip.id)}
+                    onClick={() => handleView(trip)}
                     className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs transition-all flex items-center gap-1.5"
                   >
                     <span>View Itinerary</span>
@@ -201,7 +213,7 @@ export const MyTrips = () => {
                   </button>
 
                   <button
-                    onClick={() => handleEdit(trip.id)}
+                    onClick={() => handleEdit(trip)}
                     className="px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors flex items-center gap-1"
                     title="Edit trip parameters"
                   >
@@ -239,37 +251,36 @@ export const MyTrips = () => {
 
       </div>
 
-      {/* Delete Confirmation Modal */}
       {tripToDelete && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95">
-            <div className="w-10 h-10 rounded-full bg-red-100 text-red-600 flex items-center justify-center">
-              <AlertTriangle className="w-5 h-5" />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Delete Trip</h3>
-              <p className="text-xs text-slate-500 mt-1">
-                Are you sure you want to delete <span className="font-bold text-slate-700">{tripToDelete.title}</span>? This action cannot be undone.
-              </p>
-            </div>
-            <div className="flex gap-2 pt-2">
-              <button
-                onClick={() => setTripToDelete(null)}
-                className="w-1/2 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="w-1/2 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-xs"
-              >
-                Yes, Delete
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog title="Delete Trip" confirmLabel={deleting ? 'Deleting...' : 'Yes, Delete'} busy={deleting} onConfirm={confirmDelete} onCancel={closeDelete}>
+          <p>
+            Are you sure you want to delete <span className="font-bold text-slate-700">{tripToDelete.title}</span>? This action cannot be undone.
+          </p>
+        </ConfirmDialog>
       )}
 
+      {pendingOpen && (
+        <ConfirmDialog
+          tone="warning"
+          title="Discard unsaved changes?"
+          confirmLabel="Discard and open"
+          onConfirm={() => navigate(pendingOpen.path)}
+          onCancel={closePendingOpen}
+        >
+          <p>
+            <span className="font-bold text-slate-700">{currentItinerary.title}</span>{' '}
+            {currentTripId ? 'has changes that are not saved.' : 'is a new plan that is not saved yet.'} Opening{' '}
+            <span className="font-bold text-slate-700">{pendingOpen.title}</span> will discard {currentTripId ? 'them' : 'it'}.
+          </p>
+          <p>
+            To keep it,{' '}
+            <Link to={currentTripId ? `/trips/${currentTripId}` : '/itinerary'} className="text-blue-600 font-semibold hover:underline">
+              go back to it
+            </Link>{' '}
+            and press Save.
+          </p>
+        </ConfirmDialog>
+      )}
     </div>
   );
 };

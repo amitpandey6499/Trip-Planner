@@ -92,6 +92,6 @@ test('aliases and unknown places', () => {
   assert.equal(findOfflineDestination('Panjim').name, 'Goa');
   assert.equal(findOfflineDestination('Manali, Himachal Pradesh').name, 'Manali');
   assert.equal(findOfflineDestination('Banaras').name, 'Varanasi');
-  assert.equal(findOfflineDestination('Shimla'), undefined);
+  assert.equal(findOfflineDestination('Shimla'), null);
   assert.throws(() => planOffline(prefs({ destination: 'Shimla', durationDays: 2 })), OfflineUnsupportedError);
 });

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MapPin, Users, IndianRupee, Sparkles, ArrowRight, ArrowLeft, Check, Loader2, Minus, Plus, AlertCircle } from 'lucide-react';
 import {
   BUDGET_TIERS,
@@ -13,6 +13,7 @@ import {
   TripPreferencesSchema,
   calcDuration,
   defaultTripDates,
+  findOfflinePlannerDestination,
   formatDate,
   formatINR,
   isValidIsoDate,
@@ -25,6 +26,7 @@ import { useTrip } from '../context/TripContext';
 import { interestIcon } from '../constants/ui';
 import { PageLoader, TripNotFound } from '../components/PageState';
 import { useTripFromUrl } from '../hooks/useTripFromUrl';
+import { useSystemStatus } from '../hooks/useSystemStatus';
 
 const STEPS = [
   { num: 1, label: 'Destination' },
@@ -79,17 +81,31 @@ export const CreateTrip = () => {
 
 const TripWizard = ({ editTripId }) => {
   const navigate = useNavigate();
-  const { currentPreferences, generateTrip, loading, error, clearError } = useTrip();
+  const location = useLocation();
+  const { currentPreferences, planPreferences, generateTrip, loading, error, clearError } = useTrip();
 
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState(() => initialForm(currentPreferences));
-  const [errors, setErrors] = useState({});
+  // Quick search on Home failed → it sends the server's message here.
+  const carried = location.state?.generateError ?? null;
+  const carriedStep = carried?.field ? PREFERENCE_FIELD_STEP[carried.field] : null;
+  const [step, setStep] = useState(carriedStep ?? 1);
+  // Edit starts from the open trip's own preferences; a new trip from the last values typed / picked.
+  const editingPlan = Boolean(editTripId || location.state?.fromPlan);
+  const [formData, setFormData] = useState(() => initialForm(editingPlan && planPreferences ? planPreferences : currentPreferences));
+  const [errors, setErrors] = useState(() => (carriedStep ? { [carried.field]: carried.message } : {}));
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const { status: systemStatus } = useSystemStatus();
 
-  // Do not show an error left over from another page.
+  // Without a Gemini key only the offline planner's destinations can be planned: say so on step 1,
+  // instead of failing after all four steps.
+  const aiOff = Boolean(systemStatus) && !systemStatus.services?.geminiAI;
+  const destinationTyped = formData.destination.trim().length >= 2;
+  const notCoveredOffline = aiOff && destinationTyped && !findOfflinePlannerDestination(formData.destination);
+
+  // Do not show an error left over from another page (unless Quick search sent it on purpose).
+  const keepServerError = Boolean(carried) && !carriedStep;
   useEffect(() => {
-    clearError();
-  }, [clearError]);
+    if (!keepServerError) clearError();
+  }, [clearError, keepServerError]);
 
   const update = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -117,6 +133,10 @@ const TripWizard = ({ editTripId }) => {
       setErrors(result.fields);
       return;
     }
+    if (step === 1 && notCoveredOffline) {
+      setErrors({ destination: 'AI planning is not set up yet, so please pick one of the destinations listed below.' });
+      return;
+    }
     setErrors({});
     setStep((s) => Math.min(s + 1, 4));
   };
@@ -135,8 +155,15 @@ const TripWizard = ({ editTripId }) => {
       await generateTrip(result.data, { tripId: editTripId });
       // Editing → back to that trip's page (with "unsaved changes"); new → the draft page.
       navigate(editTripId ? `/trips/${editTripId}` : '/itinerary');
-    } catch {
+    } catch (err) {
       // The server message is shown above the form (TripContext → error).
+      // If it is about one field (e.g. a destination the offline planner does not cover), go to that field.
+      const field = err.response?.data?.details?.field;
+      if (field && PREFERENCE_FIELD_STEP[field]) {
+        clearError();
+        setErrors({ [field]: err.message });
+        setStep(PREFERENCE_FIELD_STEP[field]);
+      }
     }
   };
 
@@ -213,6 +240,26 @@ const TripWizard = ({ editTripId }) => {
                   />
                 </div>
                 <FieldError message={errors.destination} />
+
+                {notCoveredOffline && (
+                  <div className="mt-2 p-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-900 space-y-2" data-testid="offline-hint">
+                    <p>
+                      AI planning is not set up on this server (no Gemini key), so trips can only be planned for these destinations right now:
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {POPULAR_DESTINATIONS.map((item) => (
+                        <button
+                          key={item.value}
+                          type="button"
+                          onClick={() => update('destination', item.value)}
+                          className="px-2.5 py-1 rounded-lg bg-white border border-amber-200 hover:border-blue-400 hover:text-blue-700 font-semibold"
+                        >
+                          {item.value}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {showSuggestions && matchingDestinations.length > 0 && (
                   <div className="absolute left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-50 max-h-48 overflow-y-auto py-1">

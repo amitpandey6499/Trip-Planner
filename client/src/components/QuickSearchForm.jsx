@@ -51,10 +51,10 @@ export const QuickSearchForm = () => {
     try {
       await generateTrip(result.data);
       navigate('/itinerary');
-    } catch {
-      // Open the full wizard with everything filled in; it shows the server's message.
+    } catch (err) {
+      // Open the full wizard with everything filled in; it shows the server's message (next to the field if it names one).
       setCurrentPreferences(result.data);
-      navigate('/trips/new');
+      navigate('/trips/new', { state: { generateError: { message: err.message, field: err.response?.data?.details?.field ?? null } } });
     }
   };
 

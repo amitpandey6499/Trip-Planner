@@ -8,6 +8,7 @@ export * from './constants.js';
 export * from './utils/dates.js';
 export * from './utils/budget.js';
 export * from './utils/interests.js';
+export * from './utils/destinations.js';
 
 export * from './schemas/preferences.js';
 export * from './schemas/itinerary.js';

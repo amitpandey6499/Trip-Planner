@@ -30,12 +30,17 @@ Google model band kare to app saaf bolega "model not found (check GEMINI_MODEL)"
 | AI fail → 500 / ajeeb error | offline planner + notice kyun; warna 422/503/429 saaf message |
 | Hotels/restaurants pe nakli 4.5★, map pe "98 km / 3.5 hours" | sirf asli rating; distance stops ke coordinates se (straight-line) |
 | Kisi page pe crash = poori app white | ErrorBoundary (Reload / Home) |
+| Key nahi + "Shimla" → 4 steps bharo, phir error | step 1 pe hi batata hai kaun si 8 jagah chalengi (click karke chuno) |
+| Home quick search fail → wizard khulta, error gayab | wizard mein wahi server message, sahi field ke neeche |
+| Explore "Plan Trip" / quick search khule hue trip ki preferences badal dete the → us trip ka Regenerate galat jagah ka plan bana deta | open trip ki preferences alag (`planPreferences`); Save / Regenerate / Edit sirf unhe use karte hain |
+| Unsaved plan ke saath doosra trip kholo → plan chupchaap gayab | "Discard unsaved changes?" dialog (Cancel / Discard and open) |
 
 ### Naye files
 - `server/src/services/ai/{geminiClient,prompt,aiCache,offlinePlanner}.js`, `server/src/data/offlineDestinations.js`
 - `server/src/models/{AiCache,AiUsage}.js`
 - `server/test/{ai,offlinePlanner}.test.js`
-- `client/src/components/{ErrorBoundary,PageState,TripTitle,Toast}.jsx`, `client/src/hooks/useTripFromUrl.js`
+- `client/src/components/{ErrorBoundary,PageState,TripTitle,Toast,ConfirmDialog}.jsx`, `client/src/hooks/useTripFromUrl.js`
+- `shared/src/utils/destinations.js` (`OFFLINE_PLANNER_DESTINATIONS` + `findOfflinePlannerDestination`: server aur wizard dono same list/matching use karte hain), `shared/test/destinations.test.js`
 
 ### Hataye gaye
 - Purana random itinerary generator (`aiService.js` ke andar) aur `@google/generative-ai` dependency.
@@ -48,8 +53,9 @@ Google model band kare to app saaf bolega "model not found (check GEMINI_MODEL)"
 - **Part 14 (share):** share link `/trips/:id` jaisa hi `/share/:slug` hoga.
 
 ### Tests
-- Server **47** (AI 10 — fake Gemini client se, bina internet; offline planner 8; auth 10; API 14; trips 4), shared 27.
-- Browser: 16 naye checks (URLs, refresh, draft, unsaved banner, discard, rename, sort, not-found, doosra user) + purane 26 checks naye URLs ke saath.
+- Server **47** (AI 10 — fake Gemini client se, bina internet; offline planner 8; auth 10; API 14; trips 4), shared **29**.
+- Browser: 19 naye checks (URLs, refresh, draft, unsaved banner, discard, rename, sort, not-found, doosra user, wizard hint,
+  quick-search error, Explore se open trip na badle, discard dialog) + purane 26 checks naye URLs ke saath.
 
 ---
 

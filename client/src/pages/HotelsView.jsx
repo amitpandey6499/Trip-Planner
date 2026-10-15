@@ -48,7 +48,7 @@ export const HotelsView = () => {
               Recommended Hotels in {destination}
             </h1>
             <p className="text-xs sm:text-sm text-slate-500">
-              Handpicked stays based on your budget and preferences
+              Stay suggestions for your budget tier. Prices are estimates — check before booking.
             </p>
           </div>
 
