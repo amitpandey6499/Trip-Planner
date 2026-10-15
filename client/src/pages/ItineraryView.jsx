@@ -23,6 +23,7 @@ import {
   CloudSun,
   Navigation,
   SlidersHorizontal,
+  Wallet,
 } from 'lucide-react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
@@ -33,6 +34,7 @@ import { PageLoader, TripNotFound } from '../components/PageState';
 import { useSystemStatus } from '../hooks/useSystemStatus';
 import ItineraryBoard from '../components/editor/ItineraryBoard';
 import ShareDialog from '../components/share/ShareDialog';
+import ExpensesPanel from '../components/expenses/ExpensesPanel';
 import { stayLinks } from '../utils/tripLinks';
 import InteractiveMap from '../components/InteractiveMap';
 import HotelCard from '../components/HotelCard';
@@ -382,6 +384,7 @@ const ItineraryPage = () => {
             { id: 'cost', label: 'Cost Breakdown', icon: PieChart },
             { id: 'weather', label: 'Weather & Packing', icon: CloudSun },
             { id: 'reach', label: 'Getting there', icon: Navigation },
+            { id: 'expenses', label: 'Expenses', icon: Wallet },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -589,6 +592,24 @@ const ItineraryPage = () => {
             />
           </section>
         )}
+
+        {/* TAB H: EXPENSES (Part 15) — saved trips only */}
+        {activeTab === 'expenses' &&
+          (isSaved ? (
+            <ExpensesPanel key={currentTripId} tripId={currentTripId} itinerary={currentItinerary} />
+          ) : (
+            <div className="bg-white rounded-2xl p-8 border border-slate-100 shadow-soft text-center space-y-3">
+              <Wallet className="w-10 h-10 text-blue-400 mx-auto" />
+              <p className="text-sm text-slate-600">Save the trip to track what you spend and split the bills with your group.</p>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold disabled:opacity-60"
+              >
+                <BookmarkCheck className="w-4 h-4" /> {saving ? 'Saving...' : 'Save Trip'}
+              </button>
+            </div>
+          ))}
 
       </div>
 

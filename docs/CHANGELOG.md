@@ -4,6 +4,50 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Part 15 — Expense tracker + bill split (tag `part-15`)
+
+### Chalane ke liye
+1. `npm install` (koi naya package nahi)
+2. `npm run dev` → koi saved trip → **Expenses** tab → "Edit people" (naam) → **Add expense**
+3. Demo account dobara banana ho (sample kharchon ke saath): `npm run seed -w server -- --reset`
+
+Koi naya env variable nahi.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Sirf andaaze ka budget | **asli kharche** track: kya, kitna, type, date, kisne diya |
+| Dosto mein hisaab = WhatsApp pe calculator | **split** barabar ya exact amounts, **kaun kisko kitna** (sabse kam payments), **Mark as paid** |
+| Plan ka estimate kitna sahi tha, pata nahi | **Spent vs the plan** chart + table, budget meter, "outside the estimate" |
+| — | **.csv** download (Excel / Google Sheets) |
+
+### Naye files
+- `shared/src/expenses/{money,ledger}.js` (toPaise, formatPaise, splitEvenly, sharesOf, computeBalances, suggestSettlements,
+  expenseSummary, buildLedger, expensesToCsv), `shared/src/schemas/expense.js` (ExpenseInputSchema, SettlementInputSchema,
+  TripMembersSchema), `shared/test/expenses.test.js`
+- `server/src/models/Expense.js`, `server/src/services/expenseService.js`, `server/src/controllers/expenseController.js`,
+  `server/test/expenses.test.js`
+- `client/src/components/expenses/{ExpensesPanel,ExpenseDialog,PeopleDialog,SpendingVsPlan}.jsx`, `client/src/hooks/useExpenses.js`
+
+### Data contract
+- Naya collection `expenses` (paise mein, `kind: expense | settlement`); trip pe `members: [{ id, name }]`.
+- Shared: `EXPENSE_CATEGORIES`, `LIMITS.MAX_TRIP_MEMBERS` (20), `MAX_EXPENSES_PER_TRIP` (500), `MAX_EXPENSE_RUPEES` (10 lakh).
+- Poora shape: `docs/CONTRACTS.md` → "Expenses".
+- Chhota fix: `npm run seed` ab sahi trip count batata hai.
+
+### Doosre parts pe asar
+- **Part 17 (admin):** kharchon ke aggregate charts (sirf ginti / totals, kisi ka naam nahi).
+- **Part 18:** API docs mein naye endpoints.
+
+### Tests
+- Shared **61** (naye 6), server **94** (naye 5: people, do tabs ek saath, add / edit / delete, settle up + undo, share page pe kuch nahi).
+- Browser 9 checks (save first, people, equal split + validation, exact split, chart + table + tooltip, settle up + Undo,
+  edit / delete + Undo, CSV + person in use, reload + phone). Saare purane browser checks (Parts 2–14) dobara pass.
+- Testing mein mila aur theek kiya: pehli baar Expenses tab do requests ek saath kholein (React dev mode / do tabs) to ek fail ho
+  jaati thi (500) — ab default log ek hi baar, atomically likhe jaate hain.
+
+---
+
 ## Part 14 — Sharing & export: share link, QR, WhatsApp, PDF, calendar (tag `part-14`)
 
 **Part 13 (AI Trip Chat) abhi hold pe** (tumhare kehne pe) — kisi aur part ko uski zarurat nahi.

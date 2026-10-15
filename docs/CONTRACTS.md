@@ -215,3 +215,26 @@ ActivityInput = { placeName, category, timeSlot?, estimatedDuration?, descriptio
 - PDF: `buildPdfContent(itinerary, { shareUrl })` (kya jaata hai, tested) + `renderTripPdf` (PDFKit). `exportLimiter`: 10 PDFs / min.
 - Calendar: `buildTripCalendar(itinerary, { uidBase, url, now })` → `{ ics, eventCount }` — client pe banta hai (unsaved plan bhi).
   Times IST → UTC. UID = `<uidBase>-<activityId>@tripplanner`.
+
+## Expenses (Part 15)
+Sab amounts **paise** mein (integer). Form rupees leta hai aur `toPaise()` se badalta hai. Log = trip ke `members` (naam, account nahi).
+```js
+// GET /api/trips/:id/expenses  ·  POST /api/trips/:id/expenses  ·  PUT|DELETE /api/trips/:id/expenses/:expenseId
+// POST /api/trips/:id/settlements { from, to, amountPaise, date }  ·  PUT /api/trips/:id/members { members: [{ id?, name }] }
+// Har answer (owner only) = poora ledger:
+{ data: {
+  members: [{ id: 'm-1a2b3c', name }],
+  expenses: [{ id, kind: 'expense' | 'settlement', description, amountPaise, category, date, paidBy, split, note?, tripId }],
+  balances: [{ memberId, name, paidPaise, spentPaise, settledPaise, balancePaise }],   // > 0 gets back, < 0 owes; sum = 0
+  settlements: [{ from, to, amountPaise }],                                         // fewest payments to settle
+  summary: { count, totalPaise, byCategory, vsPlan: [{ key, label, estimatePaise, actualPaise }], outsidePlanPaise,
+             estimatePaise, budgetPaise, leftPaise, byDate },
+} }
+ExpenseInput = { description, amountPaise, category: 'stay'|'food'|'transport'|'activities'|'travel'|'shopping'|'other',
+                 date, paidBy, split: { mode: 'equal', members: [ids] } | { mode: 'exact', shares: [{ memberId, amountPaise }] }, note? }
+```
+- Equal split: leftover paise pehle logon ko (fixed order). Exact: shares ka total = amount (warna 400 "The shares add up to ...").
+- Settlement = `paidBy: from`, `split: exact [{ memberId: to }]`; spending mein count nahi hota. Edit nahi — delete karke dobara.
+- Member hatana jab wo kisi expense mein ho → 409. Pehli GET pe default members atomically (do tabs → ek hi list).
+- Trip delete → uske expenses delete. Share page / PDF mein expenses ya members kabhi nahi.
+- CSV: `expensesToCsv(members, expenses)` (client pe; BOM + CRLF, amounts plain rupees 2 decimals).

@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { calcDuration, normalizeItinerary, ItineraryError } from '@tripplanner/shared';
-import { Trip } from '../models/index.js';
+import { Expense, Trip } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
 
 /**
@@ -117,6 +117,7 @@ export const deleteTrip = async (tripId, ownerId) => {
   if (!mongoose.isValidObjectId(tripId)) throw ApiError.notFound('Trip not found.');
   const result = await Trip.deleteOne({ _id: tripId, owner: ownerId });
   if (result.deletedCount === 0) throw ApiError.notFound('Trip not found.');
+  await Expense.deleteMany({ trip: tripId, owner: ownerId }); // Part 15: its expenses go with it
 };
 
 export const countTrips = (ownerId) => Trip.countDocuments({ owner: ownerId });

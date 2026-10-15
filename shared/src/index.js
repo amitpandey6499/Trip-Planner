@@ -23,7 +23,10 @@ export * from './schemas/trip.js';
 export * from './schemas/auth.js';
 export * from './schemas/contact.js';
 export * from './schemas/requests.js';
+export * from './schemas/expense.js';
 
 export * from './validation.js';
 export * from './itinerary/normalize.js';
 export * from './itinerary/edit.js';
+export * from './expenses/money.js';
+export * from './expenses/ledger.js';

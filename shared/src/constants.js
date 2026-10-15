@@ -26,6 +26,10 @@ export const LIMITS = Object.freeze({
   // Part 12 (editor)
   MAX_ACTIVITIES_PER_DAY: 15,
   MAX_ACTIVITY_COST: 1_000_000, // one activity, whole group (₹10 lakh)
+  // Part 15 (expenses)
+  MAX_TRIP_MEMBERS: 20,
+  MAX_EXPENSES_PER_TRIP: 500,
+  MAX_EXPENSE_RUPEES: 1_000_000, // one expense (₹10 lakh)
 });
 
 export const INTERESTS = Object.freeze([
@@ -85,6 +89,21 @@ export const BUDGET_BUCKETS = Object.freeze([
   { key: 'foodAndDining', label: 'Food & Dining' },
   { key: 'localTransport', label: 'Local Transport & Cabs' },
 ]);
+
+/**
+ * Part 15 — what a trip expense was for. `bucket` = the part of the plan's estimate it is compared with
+ * (BUDGET_BUCKETS); null = not part of the estimate (e.g. the train to the destination).
+ */
+export const EXPENSE_CATEGORIES = Object.freeze([
+  { value: 'stay', label: 'Stay', bucket: 'accommodation' },
+  { value: 'food', label: 'Food & drinks', bucket: 'foodAndDining' },
+  { value: 'transport', label: 'Local transport', bucket: 'localTransport' },
+  { value: 'activities', label: 'Tickets & activities', bucket: 'activitiesAndSightseeing' },
+  { value: 'travel', label: 'Travel to & from', bucket: null },
+  { value: 'shopping', label: 'Shopping', bucket: null },
+  { value: 'other', label: 'Other', bucket: null },
+]);
+export const EXPENSE_CATEGORY_VALUES = Object.freeze(EXPENSE_CATEGORIES.map((c) => c.value));
 
 /** Explore page filter pills. */
 export const DESTINATION_CATEGORIES = Object.freeze(['All', 'Popular', 'Beaches', 'Mountains', 'Cultural', 'Adventure', 'Spiritual', 'Hidden Gems']);

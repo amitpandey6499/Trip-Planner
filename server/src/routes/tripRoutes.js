@@ -1,5 +1,17 @@
 import express from 'express';
-import { RegenerateDaySchema, SaveTripSchema, SavedTripMapSchema, ShareSettingsSchema, TripPdfSchema, TripPreferencesSchema, UpdateTripSchema } from '@tripplanner/shared';
+import {
+  ExpenseInputSchema,
+  RegenerateDaySchema,
+  SaveTripSchema,
+  SavedTripMapSchema,
+  SettlementInputSchema,
+  ShareSettingsSchema,
+  TripMembersSchema,
+  TripPdfSchema,
+  TripPreferencesSchema,
+  UpdateTripSchema,
+} from '@tripplanner/shared';
+import { expenseController } from '../controllers/expenseController.js';
 import { mapController } from '../controllers/mapController.js';
 import { shareController } from '../controllers/shareController.js';
 import { tripController } from '../controllers/tripController.js';
@@ -24,5 +36,13 @@ router.delete('/:id', tripController.remove);
 router.post('/:id/map', mapLimiter, validateBody(SavedTripMapSchema), mapController.tripMap);
 router.get('/:id/share', shareController.getShare);
 router.put('/:id/share', validateBody(ShareSettingsSchema), shareController.setShare);
+
+// Part 15: expenses, people, settling up (answers are always the whole ledger)
+router.get('/:id/expenses', expenseController.ledger);
+router.post('/:id/expenses', validateBody(ExpenseInputSchema), expenseController.add);
+router.put('/:id/expenses/:expenseId', validateBody(ExpenseInputSchema), expenseController.update);
+router.delete('/:id/expenses/:expenseId', expenseController.remove);
+router.post('/:id/settlements', validateBody(SettlementInputSchema), expenseController.settle);
+router.put('/:id/members', validateBody(TripMembersSchema), expenseController.members);
 
 export default router;

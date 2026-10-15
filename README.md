@@ -107,7 +107,7 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | `/share/:slug` | A trip someone shared: read-only days, map, stays, costs; PDF, calendar, "Save a copy to my trips" (no login needed to view) |
 
 Inside a trip: **Edit plan** (drag & drop activities inside a day or onto another day, add / edit / remove them, rename days,
-undo / redo — the budget and the road routes follow every change) and tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks) and **Getting there** (flight / train / bus / car from your city).
+undo / redo — the budget and the road routes follow every change), **Share** (link, QR, WhatsApp, PDF, calendar), and tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks), **Getting there** (flight / train / bus / car from your city) and **Expenses** (who paid, split equally or exact, settle up, spent vs the plan, CSV).
 
 ## Useful commands (run from the project root)
 
@@ -149,6 +149,10 @@ undo / redo — the budget and the road routes follow every change) and tabs **W
 | POST | `/api/share/:slug/copy` | ✔ | Save a copy of a shared trip to my trips |
 | GET | `/api/share/:slug/pdf` | – | PDF of a shared trip (with its QR code) |
 | POST | `/api/trips/pdf` | ✔ | PDF of the plan on screen `{ itinerary, tripId? }` (saved or not) |
+| GET / POST | `/api/trips/:id/expenses` | ✔ | The trip's ledger (people, expenses, balances, settle-up, spent vs plan) / add an expense |
+| PUT / DELETE | `/api/trips/:id/expenses/:expenseId` | ✔ | Change / delete an expense (or a recorded payment back) |
+| POST | `/api/trips/:id/settlements` | ✔ | Record "A paid B back ₹X" |
+| PUT | `/api/trips/:id/members` | ✔ | The people sharing the costs (names) |
 | GET | `/api/places/search?q=` | – | Old name for `/api/destinations` (kept for old links) |
 | POST | `/api/contact` | – | Contact form message (stored in MongoDB) |
 

@@ -50,6 +50,11 @@ const tripSchema = new mongoose.Schema(
       createdAt: { type: Date },
       views: { type: Number, default: 0 },
     },
+    // Part 15: the people who share the costs (names, not accounts). Filled from travelersCount the first time.
+    members: {
+      type: [new mongoose.Schema({ id: { type: String, required: true }, name: { type: String, required: true, trim: true, maxlength: 40 } }, { _id: false })],
+      default: [],
+    },
     schemaVersion: { type: Number, default: 1 },
   },
   {

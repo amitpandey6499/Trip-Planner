@@ -30,7 +30,7 @@
 | 12 | Itinerary editor (drag & drop) | 5, 8 | ✅ Done |
 | 13 | AI Trip Chat | 6, 12 | ⏸ On hold (baad mein; neev Part 12 mein taiyaar) |
 | 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ✅ Done |
-| 15 | Expense tracker + bill split | 4, 5 | ⬜ |
+| 15 | Expense tracker + bill split | 4, 5 | ✅ Done |
 | 16 | UI polish (dark mode, Hindi/English, contact form) | 5 | ⬜ |
 | 17 | Admin dashboard | 4, 15 | ⬜ |
 | 18 | Final: tests, API docs, README, report diagrams, final deploy | all | ⬜ |
@@ -294,8 +294,26 @@ Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Pa
 
 **Depends on:** 5 — **Affects:** 16 (Hindi PDF ke liye font mein Devanagari pehle se), 18 (share link previews / OG tags deploy pe)
 
-### Part 15 — Expense tracker + bill split
-- Kharche add karo (kisne diya, kis-kis mein bata), "kaun kisko kitna dega", estimate vs actual chart.
+### Part 15 — Expense tracker + bill split ✅
+**Kya kiya**
+- Saved trip pe naya tab **"Expenses"** (unsaved plan: "Save the trip to track..."). Sirf owner dekhta hai —
+  share page / PDF mein kabhi nahi.
+- **Log (people):** sirf naam, account nahi chahiye. Pehli baar travellers ki ginti se: tumhara first name + "Traveller 2, 3...".
+  Rename / add / remove ("Edit people"); jo kisi kharche mein hai use hata nahi sakte (saaf message).
+- **Kharcha:** kya, kitna (₹, paise tak), type (Stay, Food & drinks, Local transport, Tickets & activities, Travel to & from,
+  Shopping, Other), date, kisne diya, **bata kaise**: barabar (kis-kis mein, har ek ka hissa dikhta hai) ya **exact amounts**
+  ("₹100 still to share out" live; server pe bhi check). Note optional. Edit / delete (toast mein **Undo**).
+- **Paise mein hisaab** (integer): ₹100 / 3 = 33.34 + 33.33 + 33.33 — kabhi ek paisa bhi idhar-udhar nahi.
+- **"Who paid, who owes":** har insaan ka paid, share, "gets back / owes / even". **Settle up:** sabse kam payments
+  (greedy, max people − 1) — "Aman → Neha ₹3,500" + **Mark as paid** (payment record, Undo bhi). Sab barabar → "Everyone is even."
+- **Spent vs the plan** chart: plan ke 4 hisson (stay, activities, food, local transport) ka estimate (tick) vs asli kharcha (bar);
+  zyada hua to amber + "₹X over" (sirf rang nahi). "Outside the estimate" (travel, shopping, other) alag. Hover / focus pe
+  detail, **Table** view bhi. Upar: Spent so far, budget meter (kitna bacha / kitna upar), plan estimate se farak.
+- **Spreadsheet (.csv)** download (Excel / Google Sheets, ₹ sahi dikhe isliye BOM).
+- Trip delete → uske kharche bhi delete. Demo account mein 3 sample kharche.
+- Tests: shared 6 (paise, split, balances, settle up, summary, forms, CSV), server 5, browser 9.
+
+**Depends on:** 4, 5 — **Affects:** 17 (admin charts), 18
 
 ### Part 16 — UI polish
 - Dark mode, Hindi/English toggle (AI output bhi Hindi), skeleton loaders, toasts, route-level code-splitting, mobile check.

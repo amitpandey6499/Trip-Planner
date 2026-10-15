@@ -117,6 +117,16 @@ export const shareApi = {
   pdf: (slug) => file(api.get(`/share/${encodeURIComponent(slug)}/pdf`, { responseType: 'blob' })),
 };
 
+// Part 15 — expenses, people, settling up. Every call answers with the whole ledger.
+export const expenseApi = {
+  ledger: (tripId) => data(api.get(`/trips/${tripId}/expenses`)),
+  add: (tripId, body) => data(api.post(`/trips/${tripId}/expenses`, body)),
+  update: (tripId, expenseId, body) => data(api.put(`/trips/${tripId}/expenses/${expenseId}`, body)),
+  remove: (tripId, expenseId) => data(api.delete(`/trips/${tripId}/expenses/${expenseId}`)),
+  settle: (tripId, body) => data(api.post(`/trips/${tripId}/settlements`, body)),
+  setMembers: (tripId, members) => data(api.put(`/trips/${tripId}/members`, { members })),
+};
+
 // Part 11 — weather for the trip dates, how to get there
 export const travelApi = {
   weather: (params) => data(api.get('/travel/weather', { params })),
