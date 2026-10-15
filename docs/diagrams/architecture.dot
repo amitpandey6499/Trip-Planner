@@ -1,0 +1,27 @@
+digraph G {
+  graph [rankdir=TB, nodesep=0.5, ranksep=0.65, pad=0.15, dpi=300, bgcolor=white, fontname="Liberation Sans Bold", compound=true, newrank=true];
+  node [shape=box, style="rounded,filled", fontname="Liberation Sans", fontsize=13, fontcolor=white, color=black, penwidth=1.2, margin="0.3,0.14"];
+  edge [color="#5a5a5a", penwidth=1.6, arrowsize=0.8, fontname="Liberation Sans", fontsize=11];
+
+  subgraph cluster_front { label="Frontend Layer"; fontsize=15; fontcolor="#0f4c5c"; color="#0f4c5c"; style=rounded; penwidth=1.4;
+    fe [label="React 18 + Vite + Tailwind CSS (browser)\n(Trip Wizard, Itinerary & Drag-and-drop Editor, Leaflet Map,\nShare Page, Expenses, Admin Dashboard)", fillcolor="#0f4c5c"];
+  }
+  subgraph cluster_back { label="Backend & Security Layer"; labelloc=t; labeljust=r; fontsize=15; fontcolor="#14807a"; color="#14807a"; style=rounded; penwidth=1.4;
+    be [label="Node.js + Express 5 REST API\n(JWT login in httpOnly cookie, Zod validation, Helmet,\nRate limiting, Live progress with Server-Sent Events, PDF export)", fillcolor="#14807a"];
+  }
+  shared [label="Shared package (npm workspace)\nZod schemas + budget, edit and\nbill-split logic used by both sides", shape=note, style=filled, fillcolor="#eff3f4", fontcolor="#0f4c5c", color="#5a5a5a", fontsize=11];
+  subgraph cluster_db { label="Database Layer"; labelloc=b; fontsize=15; fontcolor="#c9962c"; color="#c9962c"; style=rounded; penwidth=1.4;
+    db [label="MongoDB Atlas + Mongoose\n(Users, Trips, Expenses, Destinations,\nAI / map / weather caches)", fillcolor="#c9962c"];
+  }
+  subgraph cluster_ai { label="AI & Maps Engine"; labelloc=b; fontsize=15; fontcolor="#8e3b46"; color="#8e3b46"; style=rounded; penwidth=1.4;
+    ai [label="Google Gemini API (offline planner as fallback)\nNominatim + OSRM (OpenStreetMap)\nOpen-Meteo weather, Wikipedia photos", fillcolor="#8e3b46"];
+  }
+  fe -> be [label="  REST API calls  "];
+  be -> fe [label="  JSON + live events  "];
+  be -> db [label="  Read / Write  "];
+  be -> ai [label="  Prompt / Query  "];
+  ai -> be [label="  Itinerary JSON +\n  places, routes, weather  "];
+  shared -> fe [style=dashed, arrowhead=none, color="#888888", constraint=false];
+  be -> shared [style=dashed, arrowhead=none, color="#888888"];
+  {rank=same; be; shared}
+}

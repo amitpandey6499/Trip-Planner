@@ -4,6 +4,45 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Part 18 — Final: production, deploy setup, CI, API docs, docs (tag `part-18`, v2.0.0)
+
+**Part 7 (deploy + CI) yahin poora hua. Project complete** — Part 13 (AI chat) hold pe, Part 16 skip.
+
+### Chalane ke liye
+1. `npm install` (koi naya package nahi)
+2. `npm run dev` → http://localhost:5173 (pehle jaisa). API docs: http://localhost:5000/api/docs
+3. Online daalna: `docs/DEPLOY.md` (GitHub → Render Blueprint → `MONGODB_URI`).
+
+**Naye env variables (optional):** `SERVE_CLIENT` (auto), `CLIENT_DIST_DIR`, `TRUST_PROXY` (ab `.env.example` mein),
+`RENDER_EXTERNAL_URL` (Render khud set karta hai). `CLIENT_URL` khaali ho to Render ka address use hota hai.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Production ke liye client aur server alag host karne padte | `NODE_ENV=production` + `npm run build` → **ek server** app + API dono serve karta hai |
+| Share link WhatsApp pe sirf "TripPlanner" | `/share/:slug` pe trip ka naam, din, dates, photo (Open Graph preview) |
+| Helmet default (React app ke liye set nahi) | CSP: scripts sirf apni site, images https, confetti worker, Google Fonts; OSM ke liye Referrer-Policy |
+| Map tab se jaldi hatne pe kabhi-kabhi crash (`_leaflet_pos`) | Leaflet zoom timer guard; pehla fit bina animation |
+| API ki list sirf README mein | `/api/docs` page + `/api/openapi.json` (shared schemas se), test se hamesha sahi |
+| Deploy / CI nahi | `render.yaml`, `Dockerfile`, `.dockerignore`, `.node-version`, `.github/workflows/ci.yml` |
+| README purana | README dobara + `docs/ARCHITECTURE.md` (diagrams), `docs/DEPLOY.md`, `docs/TESTING.md` |
+| Rate limits sab per IP (300 / 15 min, map-weather 20 / min, AI 10 / min) | general **1000** / 15 min, map-weather **60** / min; AI, map aur PDF limits login ho to **har account ke liye alag** — college lab / hostel WiFi mein sab ka ek hi public IP hota hai, demo ke beech "Too many requests" na aaye |
+
+### Naye files
+- `server/src/web/clientApp.js` (built app, cache headers, share preview), `server/src/docs/openapi.js`, `server/src/docs/docsPage.js`
+- `server/test/web.test.js` (4), `server/test/docs.test.js` (3)
+- `render.yaml`, `Dockerfile`, `.dockerignore`, `.node-version`, `.github/workflows/ci.yml`
+- `docs/ARCHITECTURE.md`, `docs/DEPLOY.md`, `docs/TESTING.md`, `docs/diagrams/*` (PNG + `.dot`)
+
+### Tests
+- Server **104** (naye 7), shared 61 → **165**, lint 0 warnings, build OK.
+- Production build (`NODE_ENV=production`, port 5050) pe saare browser checks (editor, share page guest, expenses, admin) —
+  koi console error nahi. Docker image build + run + health check `healthy` (sandbox mein Docker Hub band tha, isliye local
+  Node base image se; Alpine ke packages lockfile mein hain).
+- Render pe asli deploy aur GitHub Actions ka asli run tumhare accounts se hoga — files `actionlint` aur YAML check se validate kiye.
+
+---
+
 ## Part 17 — Admin dashboard (tag `part-17`)
 
 **Part 16 (UI polish) skip kiya** (tumhare kehne pe).

@@ -6,7 +6,7 @@
 export const projectInfo = Object.freeze({
   name: 'TripPlanner',
   tagline: 'AI-Powered Smart Trip Planner',
-  version: '1.1.0',
+  version: '2.0.0',
   projectType: 'B.Tech Mini Project',
   academicSession: '2026–27',
   college: Object.freeze({

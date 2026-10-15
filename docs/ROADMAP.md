@@ -22,7 +22,7 @@
 | 4 | JWT Authentication | 3 | ✅ Done |
 | 5 | Trips CRUD + URL by trip id | 4 | ✅ Done |
 | 6 | Real Gemini AI | 2, 5 | ✅ Done |
-| 7 | Deploy v1 (live URL) + CI | 6 | ⏭ Skipped (deploy Part 18 mein) |
+| 7 | Deploy v1 (live URL) + CI | 6 | ✅ Part 18 ke saath (render.yaml, Dockerfile, CI) |
 | 8 | Real map: geocoding + road routes | 6 | ✅ Done |
 | 9 | Streaming generation + regenerate one day | 6 | ✅ Done |
 | 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ✅ Done |
@@ -33,12 +33,12 @@
 | 15 | Expense tracker + bill split | 4, 5 | ✅ Done |
 | 16 | UI polish (dark mode, Hindi/English, contact form) | 5 | ⏭ Skipped (tumhare kehne pe) |
 | 17 | Admin dashboard | 4, 15 | ✅ Done |
-| 18 | Final: tests, API docs, README, report diagrams, final deploy | all | ⬜ |
+| 18 | Final: tests, API docs, README, report diagrams, deploy setup | all | ✅ Done |
 
 **Milestones**
 - After **Part 7** → *Viva-safe*: real login, real DB, real AI, live URL. (Part 7 abhi skip kiya hai — live URL Part 18 ke final deploy mein; tab tak demo laptop pe `npm run dev` se.)
 - After **Part 12** → *Impressive*: real maps, weather, editor, streaming.
-- After **Part 18** → *Complete*.
+- After **Part 18** → *Complete* ✅ (v2.0.0). Live URL: [docs/DEPLOY.md](DEPLOY.md) ke steps (Render + Atlas accounts tumhare).
 
 ---
 
@@ -170,13 +170,11 @@
 
 **Depends on:** 2, 5 — **Affects:** 7, 8, 9, 11, 13
 
-### Part 7 — Deploy v1 + CI ⏭ (skipped for now)
-Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Part 18** mein final deploy ke saath karenge:
-- Client → Vercel, Server → Render, DB → Atlas. Production env vars, CORS, cookies (`COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`), `TRUST_PROXY=true`.
-- GitHub Actions: har push pe `npm run check`.
-- Deploy pe dhyan: Server-Sent Events (Part 9) ke liye proxy buffering band (`X-Accel-Buffering: no` server bhejta hai);
-  map services (Part 8) ki policy ke liye `GEO_USER_AGENT` mein apna site URL daalna.
-- **Needs from you (tab):** GitHub, Vercel, Render accounts (free).
+### Part 7 — Deploy + CI ✅ (Part 18 mein kiya)
+Pehle skip kiya tha; **Part 18** mein poora hua, ek badlaav ke saath: Vercel + Render alag ki jagah **ek Render service**
+(app + API ek address pe → cookies `SameSite=Lax` hi kaafi, Safari issue nahi). `render.yaml`, `Dockerfile`, GitHub Actions CI,
+guide `docs/DEPLOY.md`. Server-Sent Events ke liye `X-Accel-Buffering: no` server pehle se bhejta hai.
+**Needs from you:** GitHub + Render accounts (free) aur Atlas string — steps `docs/DEPLOY.md` mein.
 
 ### Part 8 — Real map ✅
 **Kya kiya** (details + policies: `docs/MAP_SERVICES.md`)
@@ -336,6 +334,28 @@ Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Pa
 
 **Depends on:** 4, 15 — **Affects:** 18
 
-### Part 18 — Final
-- Swagger API docs (`/api/docs`), tests badhana (Vitest + React Testing Library), README rewrite, architecture + ER diagram (report ke liye), final deploy.
-- **Part 7 ka kaam yahin:** Vercel + Render + Atlas deploy, GitHub Actions CI (upar Part 7 ki list).
+### Part 18 — Final ✅
+**Kya kiya**
+- **Ek service = app + API (production):** `NODE_ENV=production` mein Express `client/dist` bhi serve karta hai —
+  `/assets/*` 1 saal cache (naam mein hash), pages kabhi cache nahi, `/trips/123` jaise deep links → React app, `/api/*` JSON hi.
+  Vercel + Render alag ki jagah ek Render service: login cookie Safari mein bhi chalti hai (third-party cookie nahi),
+  live events bina proxy setting, aur `/share/:slug` pe **WhatsApp / Telegram preview** (trip ka naam, din, photo — Open Graph tags,
+  view count nahi badhta).
+- **Security headers:** Helmet Content Security Policy (scripts sirf apni site se; images https; confetti worker `blob:`),
+  `Referrer-Policy: strict-origin-when-cross-origin` (OpenStreetMap tiles ko Referer chahiye).
+- **Deploy files:** `render.yaml` (Blueprint: free web service, Singapore, health check `/api/health`, JWT_SECRET apne-aap,
+  MONGODB_URI / GEMINI_API_KEY / ADMIN_EMAILS dashboard mein), `.node-version` (22), `Dockerfile` (multi-stage, production
+  packages, non-root, health check), `.dockerignore`. Guide: `docs/DEPLOY.md`.
+- **CI (Part 7 ka kaam):** `.github/workflows/ci.yml` — har push / PR pe Node 22 + MongoDB 7 → `npm ci` → `npm run check`.
+- **API docs:** `/api/openapi.json` (OpenAPI 3.1, request bodies shared Zod schemas se bante hain) + `/api/docs` (padhne layak page,
+  bina script — CSP ke andar). Test: docs mein **exactly wahi** routes jo server pe hain. Footer mein "API Documentation" link.
+- **Map fix:** tab badalte waqt zoom animation chal rahi ho to Leaflet crash ("_leaflet_pos") nahi karta; pehla fit bina animation.
+- **Docs:** README dobara, `docs/ARCHITECTURE.md` (layers, use cases, DFD 0/1, sequence, ER, algorithms, security, deployment —
+  `docs/diagrams/` mein PNG + Graphviz source), `docs/DEPLOY.md`, `docs/TESTING.md`. Version **2.0.0**.
+- Tests: server 104 (naye 7: production serving + docs), shared 61 → **165**. Production build pe saare browser checks pass.
+
+**Jo jaan-boojh kar nahi kiya:** client ke liye Vitest / React Testing Library (naye packages) — UI logic `shared/` mein hai
+aur unit-tested hai, UI har part mein browser (Playwright) se check hui. Asli deploy tumhare Render / GitHub / Atlas accounts se
+hoga (`docs/DEPLOY.md`).
+
+**Depends on:** sab

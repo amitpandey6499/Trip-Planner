@@ -7,6 +7,7 @@
  * and never saw the .env values. Now every module imports `config` from here,
  * and this module loads .env first, so the order can never break again.
  */
+import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import dotenv from 'dotenv';
@@ -40,9 +41,16 @@ const envSchema = z
   .object({
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(5000),
-    CLIENT_URL: z.string().trim().default('http://localhost:5173'),
+    // Where the app runs (CORS, share links). Empty: Render's own address (RENDER_EXTERNAL_URL), else the Vite dev server.
+    CLIENT_URL: z.string().trim().default(''),
     // Part 14: address of the app in share links inside PDFs (QR code). Default: the first CLIENT_URL.
     PUBLIC_APP_URL: z.string().trim().default(''),
+    // Set by Render automatically (https://<name>.onrender.com).
+    RENDER_EXTERNAL_URL: z.string().trim().default(''),
+    // Part 18: serve the built React app (client/dist) from this server — one service for app + API.
+    // auto = yes in production when client/dist exists.
+    SERVE_CLIENT: z.enum(['auto', 'true', 'false']).default('auto'),
+    CLIENT_DIST_DIR: z.string().trim().default(''),
     TRUST_PROXY: z
       .enum(['true', 'false'])
       .default('false')
@@ -85,7 +93,7 @@ const envSchema = z
     GEO_USER_AGENT: z.string().trim().default(''),
     GEO_TIMEOUT_SECONDS: z.coerce.number().int().min(2).max(60).default(10),
     GEO_CACHE_DAYS: z.coerce.number().int().min(1).max(365).default(60),
-    MAP_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(20),
+    MAP_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(60),
 
     // Destination photos from Wikipedia (Part 10) and weather from Open-Meteo (Part 11) — free, no key.
     PHOTOS_ENABLED: z
@@ -102,7 +110,8 @@ const envSchema = z
 
     // Rate limiting
     RATE_LIMIT_WINDOW_MIN: z.coerce.number().positive().default(15),
-    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
+    // Counted per IP. A college lab or hostel shares ONE public IP, so this is generous (Part 18).
+    RATE_LIMIT_MAX: z.coerce.number().int().positive().default(1000),
     AI_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(10),
     AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(20),
   })
@@ -128,6 +137,12 @@ if (!parsed.success) {
 
 const env = parsed.data;
 const isProd = env.NODE_ENV === 'production';
+const clientUrlList = (env.CLIENT_URL || env.RENDER_EXTERNAL_URL || 'http://localhost:5173')
+  .split(',')
+  .map((url) => url.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+const clientDist = path.resolve(env.CLIENT_DIST_DIR || path.join(serverRoot, '../client/dist'));
+const serveClient = env.SERVE_CLIENT === 'true' || (env.SERVE_CLIENT === 'auto' && isProd && fs.existsSync(path.join(clientDist, 'index.html')));
 
 export const config = Object.freeze({
   env: env.NODE_ENV,
@@ -135,10 +150,9 @@ export const config = Object.freeze({
   isDev: env.NODE_ENV === 'development',
   isTest: env.NODE_ENV === 'test',
   port: env.PORT,
-  clientUrls: env.CLIENT_URL.split(',')
-    .map((url) => url.trim().replace(/\/$/, ''))
-    .filter(Boolean),
-  publicAppUrl: (env.PUBLIC_APP_URL || env.CLIENT_URL.split(',')[0] || 'http://localhost:5173').trim().replace(/\/$/, ''),
+  clientUrls: Object.freeze(clientUrlList),
+  client: Object.freeze({ serve: serveClient, distDir: clientDist }),
+  publicAppUrl: (env.PUBLIC_APP_URL || clientUrlList[0]).trim().replace(/\/$/, ''),
   trustProxy: env.TRUST_PROXY,
   mongoUri: env.MONGODB_URI,
   auth: Object.freeze({

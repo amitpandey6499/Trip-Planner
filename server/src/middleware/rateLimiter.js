@@ -3,6 +3,12 @@ import { config } from '../config/env.js';
 
 const jsonMessage = (error) => ({ success: false, error });
 
+/**
+ * Logged-in requests are counted per account, others per IP. (Part 18: in a college lab or hostel everybody shares
+ * one public IP, so a per-IP count would let one busy user block the whole room.)
+ */
+const userOrIp = (req) => (req.user?.id ? `user:${req.user.id}` : req.ip);
+
 /** Applied to every /api route. */
 export const apiLimiter = rateLimit({
   windowMs: config.rateLimit.windowMs,
@@ -20,6 +26,7 @@ export const aiLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => config.isTest,
+  keyGenerator: userOrIp,
   message: jsonMessage('AI generation limit reached. Please wait a minute before generating again.'),
 });
 
@@ -42,6 +49,7 @@ export const mapLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => config.isTest,
+  keyGenerator: userOrIp,
   message: jsonMessage('Too many map updates. Please wait a minute and try again.'),
 });
 
@@ -52,5 +60,6 @@ export const exportLimiter = rateLimit({
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   skip: () => config.isTest,
+  keyGenerator: userOrIp,
   message: jsonMessage('Too many PDF downloads. Please wait a minute and try again.'),
 });

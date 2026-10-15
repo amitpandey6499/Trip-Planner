@@ -1,0 +1,28 @@
+digraph G {
+  graph [rankdir=LR, nodesep=0.35, ranksep=1.5, pad=0.15, dpi=300, bgcolor=white];
+  node [style="rounded,filled", fontname="Liberation Sans", fontsize=15, fontcolor=white, color=black, penwidth=1.2, shape=box, margin="0.25,0.15"];
+  edge [color="#5a5a5a", penwidth=1.6, arrowsize=0.8, fontname="Liberation Sans", fontsize=12];
+
+  user [label="Traveller\n(User)", fillcolor="#0f4c5c"];
+  admin [label="Admin", fillcolor="#0f4c5c"];
+  sys [label="TripPlanner\nSystem", shape=ellipse, style=filled, fillcolor="#c9962c", fontsize=17, width=2.6, height=1.3];
+  db [label="MongoDB Atlas\n(Users, Trips, Expenses,\nDestinations, Caches)", shape=cylinder, style=filled, fillcolor="#14807a", fontsize=14];
+  gem [label="Google Gemini\nAPI", fillcolor="#8e3b46"];
+  osm [label="OpenStreetMap\n(Nominatim + OSRM)", fillcolor="#8e3b46"];
+  ext [label="Open-Meteo +\nWikipedia", fillcolor="#8e3b46"];
+
+  user -> sys [label="Trip preferences, edits,\nexpenses, login"];
+  sys -> user [label="Itinerary, map, weather,\nPDF, share link, balances"];
+  admin -> sys [label="Admin login,\nmessage actions"];
+  sys -> admin [label="Usage statistics,\nmessages, accounts"];
+  sys -> db [label="Store trips,\nusers, expenses"];
+  db -> sys [label="Saved records,\ncached answers"];
+  sys -> gem [label="Structured prompt"];
+  gem -> sys [label="Itinerary JSON\n(streamed)"];
+  sys -> osm [label="Place names,\nstop coordinates"];
+  osm -> sys [label="Coordinates,\nroad routes"];
+  sys -> ext [label="Location, dates,\narticle title"];
+  ext -> sys [label="Forecast,\nphotos"];
+  {rank=same; user; admin}
+  {rank=same; db; gem; osm; ext}
+}

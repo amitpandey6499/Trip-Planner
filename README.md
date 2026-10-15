@@ -1,58 +1,31 @@
 # TripPlanner — AI-Powered Smart Trip Planner
 
-> **B.Tech Mini Project** · ABES Engineering College, Ghaziabad (AKTU) · Department of Computer Science & Engineering · Session 2026–27
+> **B.Tech Mini Project** · ABES Engineering College, Ghaziabad (AKTU) · Department of Computer Science & Engineering · Session 2026–27 · **v2.0.0**
 
-TripPlanner turns travel preferences (destination, dates, budget in ₹, travelers, interests) into a day-wise itinerary with
-estimated costs, stays, restaurants and an interactive map.
+TripPlanner turns travel preferences — destination, dates, budget in ₹, travellers, interests, pace, stay type, food
+preference — into a day-wise itinerary with timings, costs and tips, shows every day on a map with real road routes, and
+then lets you edit, share and export the plan and split the trip's expenses.
 
-The project is being rebuilt in 18 parts. See **[docs/ROADMAP.md](docs/ROADMAP.md)** for the plan and status, and
-**[docs/CHANGELOG.md](docs/CHANGELOG.md)** for what changed in each part. Data shapes and validation rules shared by client and
-server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
+| | |
+| --- | --- |
+| 🤖 **AI plans** | Google Gemini writes the plan (structured JSON, checked by a schema); days appear live while it writes. No key or AI down → an **offline planner** builds real plans for 8 destinations. |
+| 🗺️ **Real map** | Places located with Nominatim, road routes / km / drive time with OSRM, on a Leaflet + OpenStreetMap map. |
+| ✏️ **Editor** | Drag & drop activities (mouse, touch, keyboard), add / edit / remove, undo / redo; budget and routes follow. |
+| 🌦️ **Travel info** | Weather (16-day forecast or typical weather), packing list with reasons, how to reach from 27 cities. |
+| 🔗 **Share & export** | Read-only share link, WhatsApp, QR code, PDF, calendar (.ics), "save a copy". |
+| 💸 **Expenses** | Split equally or exactly (in paise), balances, settle up with the fewest payments, CSV. |
+| 📊 **Admin** | Usage charts, contact-message inbox, accounts. |
+| 📘 **API docs** | `/api/docs` (readable) and `/api/openapi.json` (OpenAPI 3.1, generated from the shared schemas). |
+
+**Docs:** [ARCHITECTURE](docs/ARCHITECTURE.md) (diagrams, data model, algorithms) · [DEPLOY](docs/DEPLOY.md) (Render + Atlas, free) ·
+[TESTING](docs/TESTING.md) · [SETUP_MONGODB](docs/SETUP_MONGODB.md) · [MAP_SERVICES](docs/MAP_SERVICES.md) ·
+[CONTRACTS](docs/CONTRACTS.md) (data shapes) · [ROADMAP](docs/ROADMAP.md) · [CHANGELOG](docs/CHANGELOG.md)
 
 ---
 
-## Tech stack (current)
+## Run it on your computer
 
-| Layer | Technology |
-| --- | --- |
-| Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap, @dnd-kit (drag & drop editor) |
-| Maps | Nominatim (place positions) + OSRM (road routes), cached in MongoDB — see [docs/MAP_SERVICES.md](docs/MAP_SERVICES.md) |
-| Photos & weather | Wikipedia lead images (free licences, cached 30 days) · Open-Meteo forecast + archive ("typical" weather), CC BY 4.0 |
-| Sharing & export | Public read-only links, QR codes (`qrcode`), PDF (PDFKit + Noto Sans, OFL), calendar files (.ics) |
-| Live updates | Server-Sent Events (generation progress, map progress) |
-| Backend | Node.js, Express 5, Helmet, express-rate-limit |
-| Database | MongoDB Atlas + Mongoose |
-| Login | JWT in an httpOnly cookie, bcrypt password hashing |
-| Validation | Zod 4 schemas in `shared/`, used by both client and server |
-| AI | Google Gemini via `@google/genai` (JSON schema output, cache, daily limit) + offline planner for 8 destinations |
-| Tooling | npm workspaces, ESLint, Node test runner + Supertest + mongodb-memory-server |
-
-## Project structure
-
-```
-tripplanner/
-├── package.json          # npm workspaces + root scripts (dev, check, test, lint, build)
-├── eslint.config.js
-├── docs/                 # ROADMAP, CHANGELOG, CONTRACTS, SETUP_MONGODB, MAP_SERVICES
-├── shared/               # code used by BOTH client and server: schemas, constants, date/budget/map utils,
-│                         # weather codes, packing list, booking links, origin cities
-├── server/               # Express API
-│   ├── src/config/env.js # all settings, loaded from server/.env and validated
-│   ├── src/models/       # Mongoose: User, Trip, Destination, ContactMessage, AiCache, AiUsage, GeoCache
-│   ├── src/data/         # destination catalog (26 Indian destinations, seeded on start)
-│   ├── src/services/ai/  # Gemini client (+ streaming), prompt, cache/limit, offline planner
-│   ├── src/services/geo/ # Nominatim geocoder, OSRM router, map update (Part 8), shared HTTP queue + cache
-│   ├── src/services/     # + destinations, photos (Wikipedia), stays/food, favourites, weather, how to reach
-│   ├── src/middleware/   # JWT auth, validation, error handler, rate limits
-│   ├── src/controllers/  ├── src/routes/  ├── src/services/
-│   ├── scripts/          # seed (demo account), photos (refresh destination photos), test database helper
-│   └── test/             # API + auth tests (node --test + supertest)
-└── client/               # React app (Vite)
-```
-
-## Setup
-
-**Requirements:** Node.js **20.19 or newer** (`node -v`).
+**Needs:** Node.js **20.19 or newer** (22 recommended — `node -v`) and a free **MongoDB Atlas** database ([setup, 10 min](docs/SETUP_MONGODB.md)).
 
 ```bash
 # 1. Install everything (root + shared + server + client) with ONE command
@@ -61,105 +34,107 @@ npm install
 # 2. Server settings (first time only)
 #    Windows PowerShell:  Copy-Item server/.env.example server/.env
 #    macOS / Linux:       cp server/.env.example server/.env
-#    Then in server/.env set:
-#      MONGODB_URI  → free MongoDB Atlas database, see docs/SETUP_MONGODB.md (required)
-#      JWT_SECRET   → long random text (required in production)
-#      GEMINI_API_KEY → optional, free at https://aistudio.google.com/apikey
+#    then in server/.env set:
+#      MONGODB_URI     → your Atlas connection string (required)
+#      GEMINI_API_KEY  → optional, free at https://aistudio.google.com/apikey
+#      ADMIN_EMAILS    → optional, your e-mail → admin dashboard
 
-# 3. Run server (http://localhost:5000) + client (http://localhost:5173) together
+# 3. Start server (http://localhost:5000) + app (http://localhost:5173) together
 npm run dev
 ```
 
-Open **http://localhost:5173**, sign up, or click **"Try the demo account"** on the login page (a demo account with a sample
-Manali trip is created automatically). Without a Gemini key the app still works: the **offline planner** builds real day plans
-from curated places for Manali, Goa, Jaipur, Udaipur, Varanasi, Kerala, Andaman and Rishikesh, and the top banner and Profile
-page say so. Other destinations need the Gemini key.
+Open **http://localhost:5173** → sign up, or **"Try the demo account"** (a demo account with a sample Manali trip is created
+automatically). Without a Gemini key the offline planner covers **Manali, Goa, Jaipur, Udaipur, Varanasi, Kerala, Andaman and
+Rishikesh**; the app says so on the wizard, the itinerary and the Profile page. API documentation: **http://localhost:5000/api/docs**.
 
-### AI (Google Gemini)
+## Put it online (free)
 
-1. Get a free key at **https://aistudio.google.com/apikey** and put it in `server/.env` as `GEMINI_API_KEY`.
-2. Restart `npm run dev`. The terminal shows `[AI] Gemini model: ...`, and Profile shows "Configured".
-3. Optional settings (see `server/.env.example`): `GEMINI_MODEL`, `AI_DAILY_LIMIT` (per user per day, default 20),
-   `AI_TIMEOUT_SECONDS` (45), `AI_CACHE_DAYS` (7).
+One Render web service runs the built app **and** the API; data stays in MongoDB Atlas. `render.yaml` describes everything:
 
-While a plan is being written, a progress window shows each day as soon as Gemini finishes it (Cancel stops it).
-Every day also has **"New plan for this day"** (its own pace, plus a wish for the AI such as "more relaxed").
+1. Push this repository to GitHub.
+2. Render → **New → Blueprint** → pick the repository → fill `MONGODB_URI` (and optionally `GEMINI_API_KEY`, `ADMIN_EMAILS`).
+3. Open `https://<your-app>.onrender.com`.
 
-How one request is answered: **cache** (same request answered before → instant) → **Gemini** (answer must pass the shared
-itinerary schema; one retry with the reason if it does not) → **offline planner** with a notice saying why (limit reached,
-AI unreachable, bad key, model retired ...) → a clear error if that destination is not covered offline either.
-"Regenerate" skips the cache.
+Full step-by-step guide, free-plan limits and troubleshooting: **[docs/DEPLOY.md](docs/DEPLOY.md)**.
+A `Dockerfile` is included for any Docker host. GitHub Actions (`.github/workflows/ci.yml`) runs lint + all tests + build on every push.
+
+## Commands (from the project root)
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Server + app together, with auto-reload |
+| `npm run check` | Lint + all tests + production build — must pass before every commit |
+| `npm test` | Shared + server tests (165) |
+| `npm run build` | Production build of the app (`client/dist`) |
+| `npm start` | Start the server; with `NODE_ENV=production` it also serves `client/dist` (what Render runs) |
+| `npm run seed -w server -- --reset` | Recreate the demo account and its sample trip |
+| `npm run photos -w server` | Look up destination photos on Wikipedia again (normally automatic) |
+| `npm run admin -w server -- add you@example.com` | Make an account admin (`remove`, `list` too) |
+| `npm run lint` | ESLint on the whole project |
+
+## Tech stack
+
+| Layer | Technology |
+| --- | --- |
+| Frontend | React 18, Vite 6, Tailwind CSS 3, React Router 7, Leaflet + OpenStreetMap, @dnd-kit |
+| Backend | Node.js 22, Express 5, Helmet (CSP), express-rate-limit, Server-Sent Events, PDFKit, qrcode |
+| Database | MongoDB Atlas + Mongoose 9 (TTL caches for AI, map and weather answers) |
+| Login | JWT in an httpOnly cookie, bcrypt password hashing, admin role |
+| Shared | Zod 4 schemas + business logic (`shared/`) used by client **and** server |
+| AI | Google Gemini via `@google/genai` (JSON schema, streaming, cache, daily limit) + offline planner |
+| Outside services (free) | Nominatim, OSRM, Open-Meteo, Wikipedia API — polite queues + MongoDB cache |
+| Quality | ESLint, Node test runner + Supertest on a real MongoDB, GitHub Actions CI |
+| Hosting | Render (one web service) + MongoDB Atlas, or Docker |
+
+## Project structure
+
+```
+tripplanner/
+├── package.json          npm workspaces + root scripts
+├── render.yaml           Render Blueprint (one free web service)
+├── Dockerfile            app + API in one container
+├── .github/workflows/    CI: lint + tests (MongoDB 7) + build
+├── docs/                 ARCHITECTURE (+ diagrams/), DEPLOY, TESTING, CONTRACTS, ROADMAP, CHANGELOG, …
+├── shared/               schemas, constants, itinerary normalize/edit, expenses ledger, dates, budget, map,
+│                         weather codes, packing list, calendar (.ics)
+├── server/
+│   ├── src/config/       env.js (validated settings), db.js
+│   ├── src/models/       User, Trip, Expense, Destination, ContactMessage, AiCache, AiUsage, GeoCache
+│   ├── src/routes/ → controllers/ → services/   (services/ai: Gemini + offline planner, services/geo: maps)
+│   ├── src/middleware/   auth (JWT), validation, rate limits, error handler
+│   ├── src/docs/         OpenAPI description + /api/docs page
+│   ├── src/web/          serves the built app in production, link previews for /share pages
+│   ├── scripts/          seed, photos, admin, test helpers
+│   └── test/             104 API tests (Supertest + real MongoDB, fake outside services)
+└── client/src/           pages/, components/ (itinerary, editor, map, share, expenses, admin), services/api.js
+```
 
 ## Pages
 
 | URL | Page |
 | --- | --- |
-| `/trips/new` | Trip wizard (4 steps) |
-| `/itinerary` | A new plan that is not saved yet (survives a refresh in the same tab) |
-| `/trips/:id` | A saved trip — can be refreshed, bookmarked; "unsaved changes" banner after Regenerate / a new day plan / hand edits |
-| `/map` | The open trip on the map (road routes, stays, restaurants) |
-| `/trips/:id/edit` | Edit a saved trip's preferences and regenerate it |
-| `/my-trips` | Saved trips: Upcoming / Ongoing / Past tabs, search, sort, rename |
-| `/explore` | 26 destinations: categories, search, sort (incl. "good time to go now"), my favourites (`?category=&sort=&q=`) |
-| `/destinations/:slug` | One destination: photo, best months, daily cost, 7-day weather, how to get there, stays, food |
-| `/hotels?destination=&budget=` | Where to stay: areas with typical prices per tier + Booking.com / Google Maps search links |
-| `/restaurants?destination=&veg=1` | Where to eat, pure-veg filter |
-| `/share/:slug` | A trip someone shared: read-only days, map, stays, costs; PDF, calendar, "Save a copy to my trips" (no login needed to view) |
-| `/admin` | Admin dashboard (admins only): usage charts, contact messages inbox, accounts |
+| `/` | Home: quick search, good time to go now |
+| `/trips/new` | Trip wizard |
+| `/itinerary` | A new plan that is not saved yet (survives a refresh) |
+| `/trips/:id` | A saved trip: itinerary, map, stays, restaurants, cost breakdown, weather & packing, getting there, expenses; Edit plan, Share |
+| `/trips/:id/edit` | Change a saved trip's details and regenerate |
+| `/my-trips` | Saved trips: Upcoming / Ongoing / Past, search, sort, rename |
+| `/explore`, `/destinations/:slug` | 26 Indian destinations, favourites |
+| `/hotels`, `/restaurants`, `/map` | Where to stay / eat, the open trip on the map |
+| `/share/:slug` | A shared trip (no login needed), PDF, calendar, "save a copy" |
+| `/admin` | Admin dashboard (admins only) |
+| `/profile`, `/about`, `/contact`, `/auth` | Account and service status, project info, contact form, login / sign up |
 
-Inside a trip: **Edit plan** (drag & drop activities inside a day or onto another day, add / edit / remove them, rename days,
-undo / redo — the budget and the road routes follow every change), **Share** (link, QR, WhatsApp, PDF, calendar), and tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks), **Getting there** (flight / train / bus / car from your city) and **Expenses** (who paid, split equally or exact, settle up, spent vs the plan, CSV).
+## API
 
-## Useful commands (run from the project root)
+All endpoints are listed with their parameters and rules at **`/api/docs`**; the machine-readable description is
+**`/api/openapi.json`** (import it into Postman or Swagger Editor). A test makes sure the documentation always lists exactly
+the routes the server has.
 
-| Command | What it does |
-| --- | --- |
-| `npm run dev` | Start server and client together |
-| `npm test` | Run shared + server tests (first run downloads an in-memory MongoDB once, ~70 MB) |
-| `npm run seed -w server -- --reset` | Recreate the demo account and its sample trip |
-| `npm run photos -w server` | Look up all destination photos on Wikipedia again (normally automatic on server start) |
-| `npm run admin -w server -- add you@example.com` | Give an account the admin dashboard (`remove`, `list` too) |
-| `npm run lint` | ESLint on the whole project |
-| `npm run build` | Production build of the client |
-| `npm run check` | lint + tests + build — must pass after every roadmap part |
+Every answer is JSON: `{ "success": true, "data": … }` or `{ "success": false, "error": "message", "details": … }` with the
+right HTTP status. The session is a JWT in an httpOnly cookie (`tp_session`); API tools can also send `Authorization: Bearer <token>`.
 
-## API (current)
+## Project status
 
-| Method | Endpoint | Login | Description |
-| --- | --- | --- | --- |
-| GET | `/api/health` | – | Server, database and integration status |
-| POST | `/api/auth/register` | – | Create account → session cookie |
-| POST | `/api/auth/login` | – | Log in (`rememberMe` optional) → session cookie |
-| POST | `/api/auth/demo` | – | Log in to the shared demo account |
-| POST | `/api/auth/logout` | – | Clear the session cookie |
-| GET | `/api/auth/me` | ✔ | Current user + trip count + AI plans left today |
-| POST | `/api/trips/generate` | ✔ | Generate an itinerary → `{ data, preferences, meta: { source, cached, notice, ai } }`; `?fresh=1` skips the cache; `Accept: text/event-stream` = live progress + days |
-| POST | `/api/trips/regenerate-day` | ✔ | New plan for one day `{ preferences, itinerary, dayNumber, pace?, note? }` |
-| POST | `/api/map/enrich` | ✔ | Place positions + road routes for an unsaved itinerary (stream or JSON) |
-| POST | `/api/trips/:id/map` | ✔ | Same for a saved trip; the result is stored with the trip |
-| GET / POST | `/api/trips` | ✔ | List my trips / save (or update with `tripData.id`) |
-| GET / PUT / DELETE | `/api/trips/:id` | ✔ | Read / update allowed fields (title, dates, travelers, budget, starting city, packing ticks) / delete — own trips only |
-| GET | `/api/destinations?q=&category=&sort=` | – | Destinations from MongoDB (`sort` = popular, name, budget, season) |
-| GET | `/api/destinations/:slug` | – | One destination with stays, food, how to reach, notes |
-| GET | `/api/recommendations/hotels?destination=&budget=&checkIn=&checkOut=&travelers=` | – | Stay areas per tier with typical prices + booking search links (real hotels only with a Google Places key) |
-| GET | `/api/recommendations/restaurants?destination=&veg=1` | – | Places to eat, optional pure-veg filter |
-| GET / PUT / DELETE | `/api/favorites`, `/api/favorites/:slug` | ✔ | My favourite destinations |
-| GET | `/api/travel/weather?destination=&start=&end=` | – | Weather per day: forecast (16 days), then typical weather (Open-Meteo) |
-| GET | `/api/travel/reach?from=&to=&date=` | – | Flight / train / bus / car from a city, estimated times + Google Flights / IRCTC / redBus / Maps links |
-| GET / PUT | `/api/trips/:id/share` | ✔ | Share link info / turn it on or off `{ enabled, newLink? }` |
-| GET | `/api/share/:slug` | – | A shared trip (read-only, no private details) |
-| POST | `/api/share/:slug/copy` | ✔ | Save a copy of a shared trip to my trips |
-| GET | `/api/share/:slug/pdf` | – | PDF of a shared trip (with its QR code) |
-| POST | `/api/trips/pdf` | ✔ | PDF of the plan on screen `{ itinerary, tripId? }` (saved or not) |
-| GET / POST | `/api/trips/:id/expenses` | ✔ | The trip's ledger (people, expenses, balances, settle-up, spent vs plan) / add an expense |
-| PUT / DELETE | `/api/trips/:id/expenses/:expenseId` | ✔ | Change / delete an expense (or a recorded payment back) |
-| POST | `/api/trips/:id/settlements` | ✔ | Record "A paid B back ₹X" |
-| PUT | `/api/trips/:id/members` | ✔ | The people sharing the costs (names) |
-| GET | `/api/admin/stats?days=7\|30\|90` | admin | Usage numbers and per-day counts |
-| GET / PUT / DELETE | `/api/admin/messages`, `/api/admin/messages/:id` | admin | Contact messages inbox |
-| GET | `/api/admin/users?q=` | admin | Accounts with their trip counts |
-| GET | `/api/places/search?q=` | – | Old name for `/api/destinations` (kept for old links) |
-| POST | `/api/contact` | – | Contact form message (stored in MongoDB) |
-
-Every error response has the shape `{ "success": false, "error": "message", "details": { ... } }` with a proper HTTP status code.
-The session is a JWT in an httpOnly cookie (`tp_session`); API tools can also send `Authorization: Bearer <token>`.
+18-part rebuild ([ROADMAP](docs/ROADMAP.md)): Parts 1–6, 8–12, 14, 15, 17 and 18 done (Part 7 merged into 18).
+Part 13 (AI trip chat) is on hold and Part 16 (dark mode / Hindi) was skipped — see Future scope in the roadmap.

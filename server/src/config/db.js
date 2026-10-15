@@ -27,7 +27,9 @@ const explain = (err) => {
  */
 export const connectDB = async (uri = config.mongoUri) => {
   if (!uri) {
-    const err = new Error('MONGODB_URI is not set in server/.env. Follow docs/SETUP_MONGODB.md to create a free MongoDB Atlas database.');
+    const err = new Error(
+      'MONGODB_URI is not set (server/.env on your computer, the Environment tab on Render). Follow docs/SETUP_MONGODB.md to create a free MongoDB Atlas database.',
+    );
     err.hint = 'MONGODB_URI missing';
     throw err;
   }

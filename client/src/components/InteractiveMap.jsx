@@ -12,6 +12,20 @@ import { formatDuration, formatKm, mapStops } from '@tripplanner/shared';
 
 const COLORS = { stop: '#2563EB', food: '#D97706', stay: '#059669' };
 
+// Leaflet 1.9 finishes a zoom animation in a 250 ms timer. If the map is removed in between (the user
+// switches tab while it zooms), that timer used to throw "reading '_leaflet_pos'". Skip it for a removed map.
+if (!L.Map.prototype._tpSafeZoomEnd) {
+  const finishZoom = L.Map.prototype._onZoomTransitionEnd;
+  L.Map.prototype._onZoomTransitionEnd = function safeZoomEnd(...args) {
+    if (!this._mapPane) {
+      this._animatingZoom = false;
+      return undefined;
+    }
+    return finishZoom.apply(this, args);
+  };
+  L.Map.prototype._tpSafeZoomEnd = true;
+}
+
 const pin = (color, label) =>
   L.divIcon({
     className: 'custom-leaflet-marker',
@@ -27,12 +41,17 @@ const latLng = (place) => [place.coordinates.lat, place.coordinates.lng];
 /** Zoom so that everything of this day fits; only when the day (or the layers) change, not on every render. */
 const FitToPoints = ({ points, fitKey }) => {
   const map = useMap();
+  const first = useRef(true);
   useEffect(() => {
     if (points.length === 0) return;
-    if (points.length === 1) map.setView(points[0], 14);
-    else map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15 });
+    // The first fit jumps straight there (no zoom animation while the map is still appearing).
+    const animate = !first.current;
+    first.current = false;
+    if (points.length === 1) map.setView(points[0], 14, { animate });
+    else map.fitBounds(L.latLngBounds(points), { padding: [36, 36], maxZoom: 15, animate });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- fit only when the set of points changes
   }, [map, fitKey]);
+  // (No map.stop() on unmount: react-leaflet has already removed the map by then, and remove() stops it.)
   return null;
 };
 

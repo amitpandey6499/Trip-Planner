@@ -65,6 +65,12 @@ export const Footer = () => {
                   About Project
                 </Link>
               </li>
+              <li>
+                {/* Part 18: served by the API itself (a normal page, not a React route) */}
+                <a href={`${import.meta.env.VITE_API_BASE_URL || '/api'}/docs`} className="text-slate-400 hover:text-white transition-colors">
+                  API Documentation
+                </a>
+              </li>
             </ul>
           </div>
 

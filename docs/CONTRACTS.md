@@ -254,3 +254,20 @@ Sirf admins (stored `role: 'admin'` ya `ADMIN_EMAILS`; demo kabhi nahi). Baaki: 
 // GET /api/admin/users?q=  → [{ id, name, email, role, isDemo, createdAt, lastLoginAt, trips }]  (max 100; q = plain text, not a pattern)
 ```
 Din IST (UTC+05:30) mein gine jaate hain. Stats mein koi naam / e-mail / plan nahi.
+
+## API documentation (Part 18)
+- `GET /api/openapi.json` — OpenAPI **3.1**. Request bodies / query parameters `z.toJSONSchema(schema, { io: 'input' })` se
+  **shared Zod schemas** se bante hain (wahi jo server validate karta hai). Endpoint ki list `server/src/docs/openapi.js` mein.
+- `GET /api/docs` — usi description se bana HTML page (koi script nahi). Naya route banao to `ENDPOINTS` mein bhi likho —
+  `server/test/docs.test.js` fail hoga agar docs aur routes match na karein. Legacy `/api/places/*` jaan-boojh kar list nahi.
+
+## Production serving (Part 18)
+- `SERVE_CLIENT=auto` + `NODE_ENV=production` + `client/dist/index.html` maujood → Express app bhi serve karta hai:
+  `/assets/*` → `Cache-Control: public, max-age=31536000, immutable` (missing file = 404, index.html nahi);
+  baaki GET (jo `/api` nahi) → `index.html` with `Cache-Control: no-cache`.
+- `GET /share/:slug` → index.html + `<title>`, `og:title`, `og:description` ("N days in X (dates) …"), `og:url`,
+  `og:image` (sirf http(s) photo), `twitter:card`. Text HTML-escaped. Link band / anjaan → saada page. View count nahi badhta.
+- CSP: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' fonts.googleapis.com; img-src 'self' data: blob: https:;
+  font-src 'self' data: fonts.gstatic.com; connect-src 'self'; worker-src 'self' blob:; frame-ancestors 'none'; object-src 'none'`.
+  Naya bahar ka script / API chahiye to yahan (`server/src/app.js`) jodna padega.
+- `CLIENT_URL` khaali → `RENDER_EXTERNAL_URL` → `http://localhost:5173`. Share links / QR isi (ya `PUBLIC_APP_URL`) se bante hain.

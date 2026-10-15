@@ -17,13 +17,39 @@ import contactRoutes from './routes/contactRoutes.js';
 import travelRoutes from './routes/travelRoutes.js';
 import shareRoutes from './routes/shareRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import { clientApp } from './web/clientApp.js';
+import { buildOpenApi } from './docs/openapi.js';
+import { renderDocsPage } from './docs/docsPage.js';
 
 const app = express();
 
 if (config.trustProxy) app.set('trust proxy', 1);
 app.disable('x-powered-by');
 
-app.use(helmet());
+// Security headers. The policy matters once Express serves the React app (Part 18):
+// map tiles, Wikipedia / Unsplash photos (any https image), Google Fonts; scripts only from this site.
+app.use(
+  helmet({
+    contentSecurityPolicy: {
+      useDefaults: true,
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'], // Leaflet and React set inline styles
+        fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+        connectSrc: ["'self'"],
+        workerSrc: ["'self'", 'blob:'], // the confetti animation draws in a small blob: worker
+        frameAncestors: ["'none'"],
+        objectSrc: ["'none'"],
+        upgradeInsecureRequests: null, // Render serves https already; locally it would break http://localhost
+      },
+    },
+    crossOriginEmbedderPolicy: false, // photos from other sites
+    // OpenStreetMap's tile policy asks browsers to send a Referer, so no "no-referrer" here.
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+  }),
+);
 app.use(
   cors({
     origin(origin, callback) {
@@ -58,13 +84,27 @@ app.use('/api/travel', travelRoutes);
 app.use('/api/share', shareRoutes);
 app.use('/api/admin', adminRoutes);
 
-app.get('/', (_req, res) => {
-  res.json({
-    success: true,
-    message: `${projectInfo.name} API is running`,
-    health: '/api/health',
-  });
+// Part 18: API documentation — machine-readable (OpenAPI 3.1) and a readable page.
+let docsHtml = null;
+app.get('/api/openapi.json', (_req, res) => res.json(buildOpenApi()));
+app.get('/api/docs', (_req, res) => {
+  docsHtml ??= renderDocsPage(buildOpenApi());
+  res.type('html').send(docsHtml);
 });
+
+if (config.client.serve) {
+  // Part 18: the React app from client/dist (one service for app + API).
+  app.use(clientApp({ distDir: config.client.distDir }));
+} else {
+  app.get('/', (_req, res) => {
+    res.json({
+      success: true,
+      message: `${projectInfo.name} API is running`,
+      health: '/api/health',
+      docs: '/api/docs',
+    });
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);

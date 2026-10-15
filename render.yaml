@@ -1,0 +1,32 @@
+# Part 18 — Render Blueprint: ONE free web service runs the API and serves the React app (same address,
+# so the login cookie is first-party everywhere, Safari included). Step-by-step guide: docs/DEPLOY.md
+# Render → New → Blueprint → pick this repository. It asks for the "sync: false" values once.
+services:
+  - type: web
+    name: tripplanner
+    runtime: node
+    plan: free
+    region: singapore # closest to India; cannot be changed later
+    branch: main
+    buildCommand: npm ci --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+    # Node version comes from .node-version (22).
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: TRUST_PROXY # Render's load balancer sits in front: real visitor IPs for rate limits
+        value: 'true'
+      - key: JWT_SECRET
+        generateValue: true # random 256-bit secret, made once
+      - key: MONGODB_URI # MongoDB Atlas connection string (docs/SETUP_MONGODB.md)
+        sync: false
+      - key: GEMINI_API_KEY # optional: empty = offline planner (8 curated destinations)
+        sync: false
+      - key: ADMIN_EMAILS # e-mails that get the admin dashboard, comma-separated
+        sync: false
+      - key: NOMINATIM_EMAIL # optional: contact e-mail for OpenStreetMap's place search
+        sync: false
+      # CLIENT_URL is not needed: the app uses Render's own address (RENDER_EXTERNAL_URL).
+      # With your own domain, set CLIENT_URL=https://your-domain in the dashboard.

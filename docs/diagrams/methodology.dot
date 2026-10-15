@@ -1,0 +1,19 @@
+digraph G {
+  graph [rankdir=TB, nodesep=0.35, ranksep=0.45, pad=0.15, dpi=300, bgcolor=white];
+  node [shape=box, style="rounded,filled", fontname="Liberation Sans", fontsize=13, fontcolor=white, color=black, penwidth=1.2, margin="0.25,0.12"];
+  edge [color="#5a5a5a", penwidth=1.6, arrowsize=0.8];
+  input [label="User Input\n(Destination, Dates, Budget, Travellers,\nInterests, Pace, Stay Type, Food Preference)", fillcolor="#0f4c5c"];
+  validate [label="Validation\n(shared Zod schemas)", fillcolor="#0f4c5c"];
+  ai [label="AI Processing Engine\n(Google Gemini, offline planner as fallback)", fillcolor="#c9962c"];
+  d [label="Day-wise Itinerary\n(streamed day by day)", fillcolor="#14807a"];
+  s [label="Stays & Food\nSuggestions", fillcolor="#14807a"];
+  m [label="Map & Road Routes\n(Nominatim + OSRM)", fillcolor="#14807a"];
+  w [label="Weather &\nPacking List", fillcolor="#14807a"];
+  b [label="Budget Check\n(estimate vs budget)", fillcolor="#14807a"];
+  out [label="Personalized Trip Plan\n(Final Output)", fillcolor="#0f4c5c"];
+  after [label="Save  •  Edit (drag & drop)  •  Share / PDF  •  Track Expenses", fillcolor="#8e3b46"];
+  input -> validate -> ai;
+  ai -> {d s m w b};
+  {d s m w b} -> out;
+  out -> after;
+}

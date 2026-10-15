@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import mongoose from 'mongoose';
+import { formatDate } from '@tripplanner/shared';
 import { config } from '../config/env.js';
 import { Trip } from '../models/index.js';
 import { ApiError } from '../utils/ApiError.js';
@@ -125,6 +126,23 @@ export const copySharedTrip = async (slug, userId) => {
     itinerary: trip.itinerary,
   });
   return copy;
+};
+
+/**
+ * Part 18: link-preview details for /share/:slug (WhatsApp, Telegram, Slack read the page's Open Graph tags).
+ * Not counted as a view. null when the link is off / unknown.
+ */
+export const getShareMeta = async (slug) => {
+  if (!SLUG.test(String(slug ?? ''))) return null;
+  const trip = await Trip.findOne({ 'share.slug': slug, 'share.enabled': true }, 'title destination startDate endDate durationDays destinationImage share');
+  if (!trip) return null;
+  const days = `${trip.durationDays} ${trip.durationDays === 1 ? 'day' : 'days'}`;
+  return {
+    title: `${trip.title} · TripPlanner`,
+    description: `${days} in ${trip.destination} (${formatDate(trip.startDate)} – ${formatDate(trip.endDate)}): day-by-day plan, map, stays and costs. Shared on TripPlanner.`,
+    image: /^https?:\/\//.test(trip.destinationImage ?? '') ? trip.destinationImage : null,
+    url: shareUrl(trip.share.slug),
+  };
 };
 
 /** For POST /api/trips/pdf: the share address of one of the user's trips, if its link is on. */
