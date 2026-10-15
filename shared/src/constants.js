@@ -20,6 +20,9 @@ export const LIMITS = Object.freeze({
   MAX_TITLE_LENGTH: 120,
   // A start date one day in the past is still accepted (user and server time zones can differ).
   PAST_DATE_GRACE_DAYS: 1,
+  // Part 8/9
+  MAX_ROUTE_POINTS: 400, // points kept per day's road route (simplified line)
+  MAX_DAY_NOTE_LENGTH: 300, // "make Day 3 more relaxed" note for Regenerate day
 });
 
 export const INTERESTS = Object.freeze([
@@ -105,6 +108,20 @@ export const OFFLINE_PLANNER_DESTINATIONS = Object.freeze([
   }),
   Object.freeze({ name: 'Rishikesh', aliases: Object.freeze(['rishikesh', 'tapovan']) }),
 ]);
+
+/**
+ * Map data (Part 8).
+ * locationSource — where a place's map position came from:
+ *   curated  = from our curated data (offline planner / sample trip)
+ *   geocoded = looked up by name with the geocoder (Nominatim)
+ *   ai       = the AI's own approximate position (geocoder found nothing better)
+ *   none     = no usable position (not shown on the map)
+ * Route providers: osrm = real road route, estimate = straight line × road factor (routing service unreachable),
+ * none = fewer than 2 stops that day.
+ */
+export const LOCATION_SOURCES = Object.freeze(['curated', 'geocoded', 'ai', 'none']);
+export const ROUTE_PROVIDERS = Object.freeze(['osrm', 'estimate', 'none']);
+export const MAP_VERSION = 1;
 
 /** Trip phase is CALCULATED from dates (utils/dates.js → tripPhase), never stored. */
 export const TRIP_PHASES = Object.freeze(['Upcoming', 'Ongoing', 'Past']);

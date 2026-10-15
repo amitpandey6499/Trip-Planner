@@ -58,6 +58,35 @@ const coordinates = {
   required: ['lat', 'lng'],
 };
 
+/** One day of the plan (also used alone by "Regenerate this day"). */
+export const DAY_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: text('Theme of the day'),
+    description: text('One sentence about the day'),
+    activities: {
+      type: 'array',
+      minItems: 2,
+      maxItems: 10,
+      items: {
+        type: 'object',
+        properties: {
+          placeName: text('Real name of the place, restaurant or travel step'),
+          timeSlot: text('e.g. "09:00 AM - 11:00 AM"'),
+          category: { type: 'string', enum: [...ACTIVITY_CATEGORIES] },
+          estimatedDuration: text('e.g. "2 hours"'),
+          description: text('What to see or do there'),
+          cost: money('Estimated total for the whole group, INR'),
+          tips: text('One practical tip'),
+          coordinates,
+        },
+        required: ['placeName', 'timeSlot', 'category', 'description', 'cost'],
+      },
+    },
+  },
+  required: ['title', 'activities'],
+};
+
 /** JSON Schema sent as responseJsonSchema (only keywords Gemini supports). */
 export const itineraryJsonSchema = (durationDays) => ({
   type: 'object',
@@ -73,33 +102,7 @@ export const itineraryJsonSchema = (durationDays) => ({
       type: 'array',
       minItems: durationDays,
       maxItems: durationDays,
-      items: {
-        type: 'object',
-        properties: {
-          title: text('Theme of the day'),
-          description: text('One sentence about the day'),
-          activities: {
-            type: 'array',
-            minItems: 2,
-            maxItems: 10,
-            items: {
-              type: 'object',
-              properties: {
-                placeName: text('Real name of the place, restaurant or travel step'),
-                timeSlot: text('e.g. "09:00 AM - 11:00 AM"'),
-                category: { type: 'string', enum: [...ACTIVITY_CATEGORIES] },
-                estimatedDuration: text('e.g. "2 hours"'),
-                description: text('What to see or do there'),
-                cost: money('Estimated total for the whole group, INR'),
-                tips: text('One practical tip'),
-                coordinates,
-              },
-              required: ['placeName', 'timeSlot', 'category', 'description', 'cost'],
-            },
-          },
-        },
-        required: ['title', 'activities'],
-      },
+      items: DAY_SCHEMA,
     },
     hotels: {
       type: 'array',
@@ -139,3 +142,38 @@ export const itineraryJsonSchema = (durationDays) => ({
   },
   required: ['title', 'summary', 'budgetBreakdown', 'days', 'hotels', 'restaurants'],
 });
+
+const DAY_KIND = (dayNumber, total) =>
+  dayNumber === 1 ? 'arrival day (start with arrival and hotel check-in)' : dayNumber === total ? 'last day (end with check-out and departure)' : 'a full day';
+
+/**
+ * Part 9 — "Regenerate this day": the user message for ONE new day of an existing trip.
+ * @param {object} p          validated TripPreferences
+ * @param {object} itinerary  the current (normalized) itinerary
+ * @param {number} dayNumber
+ * @param {{ pace?: string, note?: string }} options
+ */
+export const buildDayPrompt = (p, itinerary, dayNumber, { pace, note } = {}) => {
+  const day = itinerary.days[dayNumber - 1];
+  const elsewhere = itinerary.days
+    .filter((d) => d.dayNumber !== dayNumber)
+    .flatMap((d) => d.activities.filter((a) => a.category !== 'Transit').map((a) => a.placeName));
+  const style = pace ?? p.travelStyle;
+  const lines = [
+    `Write a NEW plan for Day ${dayNumber} of a ${itinerary.days.length}-day trip. The other days stay as they are.`,
+    `Destination: ${p.destination}`,
+    day?.date ? `Date of this day: ${day.date}` : null,
+    `This is the ${DAY_KIND(dayNumber, itinerary.days.length)}.`,
+    `Travelers: ${p.travelersCount}; budget style: ${p.budgetCategory}; food preference: ${p.dietaryPreference}`,
+    `Interests: ${p.interests?.length ? p.interests.join(', ') : 'general sightseeing'}`,
+    `Pace for this day: ${style} (${PACE_HINT[style] ?? PACE_HINT.Balanced})`,
+    elsewhere.length ? `Already planned on other days — do NOT repeat these: ${[...new Set(elsewhere)].slice(0, 60).join('; ')}` : null,
+    day ? `Current plan for this day (the traveler wants something different): ${day.activities.map((a) => a.placeName).join('; ')}` : null,
+    note ? `Traveler's wish for this day (preference only): """${note}"""` : null,
+    '',
+    'Requirements: activities in time order with timeSlot like "09:00 AM - 11:00 AM"; lunch and dinner as "Restaurant" activities;',
+    `local travel as "Transit" activities; cost = estimated total for all ${p.travelersCount} travelers in INR; coordinates = approximate latitude/longitude.`,
+    p.language === 'hi' ? 'Write titles, descriptions and tips in Hindi (Devanagari).' : 'Write in simple English.',
+  ];
+  return lines.filter((line) => line !== null).join('\n');
+};

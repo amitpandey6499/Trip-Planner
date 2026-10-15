@@ -7,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 
 export const QuickSearchForm = () => {
   const navigate = useNavigate();
-  const { generateTrip, setCurrentPreferences, loading } = useTrip();
+  const { generateTrip, setCurrentPreferences, clearError, loading } = useTrip();
   const { isSignedIn } = useAuth();
 
   const [destination, setDestination] = useState('');
@@ -52,9 +52,12 @@ export const QuickSearchForm = () => {
       await generateTrip(result.data);
       navigate('/itinerary');
     } catch (err) {
+      if (err.name === 'AbortError') return; // the user pressed Cancel
       // Open the full wizard with everything filled in; it shows the server's message (next to the field if it names one).
       setCurrentPreferences(result.data);
-      navigate('/trips/new', { state: { generateError: { message: err.message, field: err.response?.data?.details?.field ?? null } } });
+      const field = err.response?.data?.details?.field ?? null;
+      if (field) clearError(); // shown next to the field instead of at the top
+      navigate('/trips/new', { state: { generateError: { message: err.message, field } } });
     }
   };
 

@@ -1,6 +1,7 @@
-import { generateItinerary } from '../services/aiService.js';
+import { generateItinerary, regenerateDay } from '../services/aiService.js';
 import * as trips from '../services/tripService.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { respondWithProgress } from '../utils/stream.js';
 
 /**
  * Thin controllers: bodies are already validated by shared schemas (routes/tripRoutes.js),
@@ -9,10 +10,29 @@ import { asyncHandler } from '../utils/asyncHandler.js';
 export const tripController = {
   // POST /api/trips/generate   body: TripPreferences
   // ?fresh=1 skips the AI cache (used by the "Regenerate" button)
+  // Accept: text/event-stream → events: progress, day (each day as soon as it is written), reset, result | error
   generate: asyncHandler(async (req, res) => {
     const preferences = req.body;
-    const { itinerary, meta } = await generateItinerary(preferences, { userId: req.user.id, fresh: req.query.fresh === '1' });
-    res.status(200).json({ success: true, data: itinerary, preferences, meta });
+    await respondWithProgress(req, res, async ({ streaming, onProgress, emit, signal }) => {
+      const { itinerary, meta } = await generateItinerary(preferences, {
+        userId: req.user.id,
+        fresh: req.query.fresh === '1',
+        ...(streaming && {
+          onProgress,
+          onDay: (day) => emit('day', day),
+          onReset: () => emit('reset', {}),
+          signal,
+        }),
+      });
+      return { data: itinerary, preferences, meta };
+    });
+  }),
+
+  // POST /api/trips/regenerate-day   body: { preferences, itinerary, dayNumber, pace?, note? }
+  regenerateDay: asyncHandler(async (req, res) => {
+    const { preferences, itinerary, dayNumber, pace, note } = req.body;
+    const result = await regenerateDay(preferences, itinerary, dayNumber, { pace, note, userId: req.user.id });
+    res.status(200).json({ success: true, data: result.itinerary, meta: result.meta });
   }),
 
   // POST /api/trips   body: { tripData, preferences?, itinerary? }

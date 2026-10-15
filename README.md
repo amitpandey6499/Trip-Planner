@@ -16,6 +16,8 @@ server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 | Layer | Technology |
 | --- | --- |
 | Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap |
+| Maps | Nominatim (place positions) + OSRM (road routes), cached in MongoDB — see [docs/MAP_SERVICES.md](docs/MAP_SERVICES.md) |
+| Live updates | Server-Sent Events (generation progress, map progress) |
 | Backend | Node.js, Express 5, Helmet, express-rate-limit |
 | Database | MongoDB Atlas + Mongoose |
 | Login | JWT in an httpOnly cookie, bcrypt password hashing |
@@ -29,12 +31,13 @@ server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 tripplanner/
 ├── package.json          # npm workspaces + root scripts (dev, check, test, lint, build)
 ├── eslint.config.js
-├── docs/                 # ROADMAP, CHANGELOG, CONTRACTS, SETUP_MONGODB
+├── docs/                 # ROADMAP, CHANGELOG, CONTRACTS, SETUP_MONGODB, MAP_SERVICES
 ├── shared/               # code used by BOTH client and server: schemas, constants, date/budget utils
 ├── server/               # Express API
 │   ├── src/config/env.js # all settings, loaded from server/.env and validated
-│   ├── src/models/       # Mongoose: User, Trip, ContactMessage, AiCache, AiUsage
-│   ├── src/services/ai/  # Gemini client, prompt, cache/limit, offline planner
+│   ├── src/models/       # Mongoose: User, Trip, ContactMessage, AiCache, AiUsage, GeoCache
+│   ├── src/services/ai/  # Gemini client (+ streaming), prompt, cache/limit, offline planner
+│   ├── src/services/geo/ # Nominatim geocoder, OSRM router, map update (Part 8)
 │   ├── src/middleware/   # JWT auth, validation, error handler, rate limits
 │   ├── src/controllers/  ├── src/routes/  ├── src/services/
 │   ├── scripts/          # seed (demo account), test database helper
@@ -74,6 +77,9 @@ page say so. Other destinations need the Gemini key.
 3. Optional settings (see `server/.env.example`): `GEMINI_MODEL`, `AI_DAILY_LIMIT` (per user per day, default 20),
    `AI_TIMEOUT_SECONDS` (45), `AI_CACHE_DAYS` (7).
 
+While a plan is being written, a progress window shows each day as soon as Gemini finishes it (Cancel stops it).
+Every day also has **"New plan for this day"** (its own pace, plus a wish for the AI such as "more relaxed").
+
 How one request is answered: **cache** (same request answered before → instant) → **Gemini** (answer must pass the shared
 itinerary schema; one retry with the reason if it does not) → **offline planner** with a notice saying why (limit reached,
 AI unreachable, bad key, model retired ...) → a clear error if that destination is not covered offline either.
@@ -85,7 +91,8 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | --- | --- |
 | `/trips/new` | Trip wizard (4 steps) |
 | `/itinerary` | A new plan that is not saved yet (survives a refresh in the same tab) |
-| `/trips/:id` | A saved trip — can be refreshed, bookmarked; "unsaved changes" banner after Regenerate |
+| `/trips/:id` | A saved trip — can be refreshed, bookmarked; "unsaved changes" banner after Regenerate / a new day plan |
+| `/map` | The open trip on the map (road routes, stays, restaurants) |
 | `/trips/:id/edit` | Edit a saved trip's preferences and regenerate it |
 | `/my-trips` | Saved trips: Upcoming / Ongoing / Past tabs, search, sort, rename |
 
@@ -110,7 +117,10 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | POST | `/api/auth/demo` | – | Log in to the shared demo account |
 | POST | `/api/auth/logout` | – | Clear the session cookie |
 | GET | `/api/auth/me` | ✔ | Current user + trip count + AI plans left today |
-| POST | `/api/trips/generate` | ✔ | Generate an itinerary → `{ data, preferences, meta: { source, cached, notice, ai } }`; `?fresh=1` skips the cache |
+| POST | `/api/trips/generate` | ✔ | Generate an itinerary → `{ data, preferences, meta: { source, cached, notice, ai } }`; `?fresh=1` skips the cache; `Accept: text/event-stream` = live progress + days |
+| POST | `/api/trips/regenerate-day` | ✔ | New plan for one day `{ preferences, itinerary, dayNumber, pace?, note? }` |
+| POST | `/api/map/enrich` | ✔ | Place positions + road routes for an unsaved itinerary (stream or JSON) |
+| POST | `/api/trips/:id/map` | ✔ | Same for a saved trip; the result is stored with the trip |
 | GET / POST | `/api/trips` | ✔ | List my trips / save (or update with `tripData.id`) |
 | GET / PUT / DELETE | `/api/trips/:id` | ✔ | Read / update allowed fields (title, dates, travelers, budget) / delete — own trips only |
 | GET | `/api/places/search?q=&category=` | – | Search destinations |

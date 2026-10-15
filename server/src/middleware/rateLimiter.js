@@ -34,3 +34,13 @@ export const authLimiter = rateLimit({
   keyGenerator: (req) => `${req.ip}|${String(req.body?.email ?? '').toLowerCase()}`,
   message: jsonMessage('Too many login attempts. Please wait 15 minutes and try again.'),
 });
+
+/** Map updates (place lookup + routes): mostly cached, but each one can take a while. */
+export const mapLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: config.rateLimit.mapPerMinute,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: () => config.isTest,
+  message: jsonMessage('Too many map updates. Please wait a minute and try again.'),
+});

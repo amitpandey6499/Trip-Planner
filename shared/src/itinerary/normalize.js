@@ -26,7 +26,7 @@ const asArray = (value) => (Array.isArray(value) ? value : []);
 /**
  * Make ANY itinerary (from Gemini, the sample data, or an old saved trip) follow the
  * contract and have numbers that add up:
- *   - days renumbered 1..N, dated from the trip start date, ids added
+ *   - days renumbered 1..N, dated from the trip start date, ids added (days, activities, stays, restaurants)
  *   - trip facts (dates, travelers, budget) taken from the user's preferences
  *   - budget recomputed bottom-up (see computeBudget), withinBudget flag set
  *
@@ -75,6 +75,9 @@ export const normalizeItinerary = (raw, prefs = {}, { expectDays } = {}) => {
     totalBudget: prefs.totalBudget ?? raw.totalBudget ?? 0,
     budgetBreakdown: raw.budgetBreakdown ?? {},
     days,
+    // ids so the map and the cards can point at one stay / restaurant (Part 8)
+    hotels: asArray(raw.hotels).map((hotel, i) => (hotel && typeof hotel === 'object' ? { ...hotel, id: hotel.id || `hotel-${i + 1}` } : hotel)),
+    restaurants: asArray(raw.restaurants).map((place, i) => (place && typeof place === 'object' ? { ...place, id: place.id || `restaurant-${i + 1}` } : place)),
   };
 
   const parsed = ItinerarySchema.safeParse(draft);

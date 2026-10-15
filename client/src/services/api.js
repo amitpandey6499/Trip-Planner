@@ -1,4 +1,6 @@
 import axios from 'axios';
+import { SESSION_EXPIRED_EVENT } from './events.js';
+import { postStream } from './stream.js';
 
 /**
  * The ONLY place the frontend talks to the backend.
@@ -16,8 +18,7 @@ const api = axios.create({
   },
 });
 
-/** Fired when the server says the session is gone (expired / logged out elsewhere). AuthContext listens. */
-export const SESSION_EXPIRED_EVENT = 'tripplanner:session-expired';
+export { SESSION_EXPIRED_EVENT };
 
 // These calls are allowed to answer 401 without meaning "your session expired".
 const AUTH_PROBES = ['/auth/me', '/auth/login', '/auth/register', '/auth/demo'];
@@ -55,9 +56,14 @@ export const authApi = {
 };
 
 export const tripApi = {
-  // fresh: true skips the server's AI cache (Regenerate)
-  generate: (preferences, { fresh = false } = {}) =>
-    data(api.post('/trips/generate', preferences, { params: fresh ? { fresh: 1 } : undefined, timeout: 120000 })),
+  // Live generation (Part 9): onEvent('progress' | 'day' | 'reset', data); fresh: true skips the AI cache.
+  generate: (preferences, { fresh = false, onEvent, signal } = {}) =>
+    postStream('/trips/generate', preferences, { params: fresh ? { fresh: 1 } : undefined, onEvent, signal }),
+  // body: { preferences, itinerary, dayNumber, pace?, note? }
+  regenerateDay: (body) => data(api.post('/trips/regenerate-day', body, { timeout: 120000 })),
+  // Map (Part 8): place positions + road routes, with progress events.
+  updateMap: (itinerary, { force = false, onEvent, signal } = {}) => postStream('/map/enrich', { itinerary, force }, { onEvent, signal }),
+  updateSavedTripMap: (id, { force = false, onEvent, signal } = {}) => postStream(`/trips/${id}/map`, { force }, { onEvent, signal }),
   // body: { tripData, preferences, itinerary }
   saveTrip: (body) => data(api.post('/trips', body)),
   getTrips: () => data(api.get('/trips')),

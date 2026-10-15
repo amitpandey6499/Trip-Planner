@@ -11,3 +11,8 @@ process.env.JWT_SECRET = 'test-secret-that-is-long-enough-0123456789';
 process.env.DEMO_LOGIN_ENABLED = 'true';
 process.env.AI_DAILY_LIMIT = '3';
 process.env.AI_CACHE_DAYS = '7';
+// Map services are never called for real in tests: they get a fake fetch (test/map.test.js).
+process.env.MAP_ENABLED = 'true';
+process.env.NOMINATIM_URL = 'http://nominatim.test';
+process.env.OSRM_URL = 'http://osrm.test';
+process.env.NOMINATIM_EMAIL = '';

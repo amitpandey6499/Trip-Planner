@@ -9,12 +9,14 @@ export * from './utils/dates.js';
 export * from './utils/budget.js';
 export * from './utils/interests.js';
 export * from './utils/destinations.js';
+export * from './utils/map.js';
 
 export * from './schemas/preferences.js';
 export * from './schemas/itinerary.js';
 export * from './schemas/trip.js';
 export * from './schemas/auth.js';
 export * from './schemas/contact.js';
+export * from './schemas/requests.js';
 
 export * from './validation.js';
 export * from './itinerary/normalize.js';

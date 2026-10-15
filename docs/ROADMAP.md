@@ -22,9 +22,9 @@
 | 4 | JWT Authentication | 3 | ✅ Done |
 | 5 | Trips CRUD + URL by trip id | 4 | ✅ Done |
 | 6 | Real Gemini AI | 2, 5 | ✅ Done |
-| 7 | Deploy v1 (live URL) + CI | 6 | ⬜ |
-| 8 | Real map: geocoding + road routes | 6 | ⬜ |
-| 9 | Streaming generation + regenerate one day | 6 | ⬜ |
+| 7 | Deploy v1 (live URL) + CI | 6 | ⏭ Skipped (deploy Part 18 mein) |
+| 8 | Real map: geocoding + road routes | 6 | ✅ Done |
+| 9 | Streaming generation + regenerate one day | 6 | ✅ Done |
 | 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ⬜ |
 | 11 | Weather + packing list + "How to reach" | 6, 8 | ⬜ |
 | 12 | Itinerary editor (drag & drop) | 5, 8 | ⬜ |
@@ -36,7 +36,7 @@
 | 18 | Final: tests, API docs, README, report diagrams, final deploy | all | ⬜ |
 
 **Milestones**
-- After **Part 7** → *Viva-safe*: real login, real DB, real AI, live URL.
+- After **Part 7** → *Viva-safe*: real login, real DB, real AI, live URL. (Part 7 abhi skip kiya hai — live URL Part 18 ke final deploy mein; tab tak demo laptop pe `npm run dev` se.)
 - After **Part 12** → *Impressive*: real maps, weather, editor, streaming.
 - After **Part 18** → *Complete*.
 
@@ -170,20 +170,42 @@
 
 **Depends on:** 2, 5 — **Affects:** 7, 8, 9, 11, 13
 
-### Part 7 — Deploy v1 + CI
+### Part 7 — Deploy v1 + CI ⏭ (skipped for now)
+Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Part 18** mein final deploy ke saath karenge:
 - Client → Vercel, Server → Render, DB → Atlas. Production env vars, CORS, cookies (`COOKIE_SAMESITE=none`, `COOKIE_SECURE=true`), `TRUST_PROXY=true`.
 - GitHub Actions: har push pe `npm run check`.
-- **Needs from you:** GitHub, Vercel, Render accounts (free).
+- Deploy pe dhyan: Server-Sent Events (Part 9) ke liye proxy buffering band (`X-Accel-Buffering: no` server bhejta hai);
+  map services (Part 8) ki policy ke liye `GEO_USER_AGENT` mein apna site URL daalna.
+- **Needs from you (tab):** GitHub, Vercel, Render accounts (free).
 
-### Part 8 — Real map
-- Geocoding service (Nominatim, cache in DB, 1 req/sec) → AI ke places ke sahi coordinates.
-- Routing service (OSRM) → har din ka asli road route, road distance aur travel time (abhi sirf straight-line distance).
-- Map: `fitBounds`, hotels/restaurants ke pins, card click → map pe focus.
-- **Affects:** 10, 11, 12
+### Part 8 — Real map ✅
+**Kya kiya** (details + policies: `docs/MAP_SERVICES.md`)
+- **Geocoding (Nominatim):** AI ke places ke asli coordinates ("Amber Fort, Jaipur"), destination ke aas-paas bias, 300 km se door = galat.
+  Curated (offline planner) places lookup nahi hote. "Lunch at X" aur restaurant "X" = ek hi lookup.
+- **Road routes (OSRM):** har din ke stops ka asli road route, km, driving time, stops ke beech har leg. Line simplify (max 400 points).
+- **Usage policies follow:** har service 1 request/second (ek queue), app ka User-Agent, MongoDB cache (`GeoCache`), `MAP_ENABLED` flag.
+- Service down / islands (NoRoute) → crash nahi: honest estimate (straight × 1.35) + notice + **Retry**.
+- Saved trip ka map trip ke saath save; dobara kholne pe 0 requests. Unsaved plan ka map save ke saath jaata hai.
+- Map: `fitBounds`, numbered stops, route line (estimate = dashed), **Stays / Restaurants** pins (toggle),
+  card ka "View on Map" → us pin pe zoom + popup, list click → pin. Day pills map tab mein. Leaflet CSS ab bundle mein (CDN nahi).
+- Timeline: "Driving today: 38 km • 1 h 20 min" aur har stop ke baad "2.9 km • 6 min to the next stop".
+- "98 km / 3.5 hours" jaisa koi hardcode nahi bacha. Profile pe asli map services.
+- Tests: 10 server (fake Nominatim/OSRM), shared map utils, browser.
 
-### Part 9 — Streaming + regenerate one day
-- Server-Sent Events: din ek-ek karke screen pe aate hain (progress bar).
-- "Sirf Day 3 dobara banao" button.
+**Depends on:** 6 — **Affects:** 10, 11, 12
+
+### Part 9 — Streaming + regenerate one day ✅
+**Kya kiya**
+- `POST /api/trips/generate` + `Accept: text/event-stream` → **live events**: `progress`, `day` (har din jaise hi AI likh le), `reset` (retry), `result` / `error`.
+  Normal JSON wala tareeka bhi chalta hai (API tools, tests).
+- Gemini **streaming** (`generateContentStream`) + chhota JSON scanner jo adhoore jawab se poore din nikalta hai; timeout ab "aakhri piece ke baad" se.
+- **Progress window** (har page pe): progress bar, "Day 2 of 4 is ready", din ek-ek karke, seconds, **Cancel** (server pe Gemini bhi ruk jaata hai).
+- **"New plan for this day"**: sirf ek din dobara — us din ki pace (Relaxed/Balanced/Packed) aur AI ke liye wish ("more relaxed").
+  Doosre dino ki jagah repeat nahi hoti; baaki din, stays, routes same. Unsaved banner → Save changes. Day ka naya route apne-aap.
+  Bina AI: offline planner un jagahon se banata hai jo trip mein kahin nahi hain.
+- Tests: 11 server (stream order, reset, cancel/abort, offline days, error event, day regen offline + Gemini + fallback + checks), browser.
+
+**Depends on:** 6 — **Affects:** 12, 13
 
 ### Part 10 — Destinations, photos, hotels, favorites
 - Destinations DB mein (20+ Indian destinations), categories sahi (Popular/Hidden Gems ab khaali nahi).
@@ -217,3 +239,4 @@
 
 ### Part 18 — Final
 - Swagger API docs (`/api/docs`), tests badhana (Vitest + React Testing Library), README rewrite, architecture + ER diagram (report ke liye), final deploy.
+- **Part 7 ka kaam yahin:** Vercel + Render + Atlas deploy, GitHub Actions CI (upar Part 7 ki list).

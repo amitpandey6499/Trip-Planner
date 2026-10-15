@@ -21,6 +21,7 @@ import {
   Info,
   Database,
   Undo2,
+  Loader2,
 } from 'lucide-react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
@@ -28,6 +29,7 @@ import { ITINERARY_SOURCES, LIMITS, addDays, formatDate, formatINR, todayIso } f
 import { useTrip } from '../context/TripContext';
 import { useTripFromUrl } from '../hooks/useTripFromUrl';
 import { PageLoader, TripNotFound } from '../components/PageState';
+import { useSystemStatus } from '../hooks/useSystemStatus';
 import DayTimeline from '../components/DayTimeline';
 import InteractiveMap from '../components/InteractiveMap';
 import HotelCard from '../components/HotelCard';
@@ -82,11 +84,23 @@ const ItineraryPage = () => {
     saving,
     loading,
     error,
+    regenerateDay,
+    dayLoading,
+    mapStatus,
+    updateMap,
   } = useTrip();
+  const { status: systemStatus } = useSystemStatus();
+  const aiOn = Boolean(systemStatus?.services?.geminiAI);
 
   const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary' | 'map' | 'hotels' | 'restaurants' | 'cost'
   const [selectedDayNumber, setSelectedDayNumber] = useState(1);
   const [copied, setCopied] = useState(false);
+  // "View on Map" from a stay / restaurant card: { kind: 'stay' | 'food', id, at }
+  const [mapFocus, setMapFocus] = useState(null);
+  const showOnMap = (kind) => (place) => {
+    setMapFocus({ kind, id: place.id, at: Date.now() });
+    setActiveTab('map');
+  };
 
   // A new plan (or a different trip) starts at day 1.
   useEffect(() => {
@@ -103,7 +117,8 @@ const ItineraryPage = () => {
     }
   }, [generationId]);
 
-  if (loading) {
+  // (While a plan is being made, the progress window is shown on top — GenerationOverlay.)
+  if (loading && !currentItinerary) {
     return (
       <PageLoader
         title="Building your itinerary..."
@@ -352,7 +367,7 @@ const ItineraryPage = () => {
         <div className="bg-white rounded-2xl p-1.5 border border-slate-100 shadow-soft flex items-center gap-1 overflow-x-auto no-print">
           {[
             { id: 'itinerary', label: 'Itinerary', icon: Calendar },
-            { id: 'map', label: 'Map View', icon: Map },
+            { id: 'map', label: mapStatus.state === 'working' ? 'Map View…' : 'Map View', icon: mapStatus.state === 'working' ? Loader2 : Map },
             { id: 'hotels', label: 'Hotels', icon: Bed },
             { id: 'restaurants', label: 'Restaurants', icon: Utensils },
             { id: 'cost', label: 'Cost Breakdown', icon: PieChart },
@@ -370,7 +385,7 @@ const ItineraryPage = () => {
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${Icon === Loader2 ? 'animate-spin' : ''}`} />
                 <span>{tab.label}</span>
               </button>
             );
@@ -446,7 +461,19 @@ const ItineraryPage = () => {
 
             {/* Right Day Details Timeline */}
             <div className="lg:col-span-8">
-              <DayTimeline day={selectedDay} />
+              <DayTimeline
+                day={selectedDay}
+                aiOn={aiOn}
+                onRegenerate={regenerateDay}
+                regenerating={dayLoading === selectedDay?.dayNumber}
+                regenerateBlocked={
+                  datesInPast
+                    ? 'These dates are in the past: change them with Edit first.'
+                    : loading || dayLoading
+                      ? 'Please wait for the current plan to finish.'
+                      : null
+                }
+              />
             </div>
 
           </div>
@@ -455,9 +482,27 @@ const ItineraryPage = () => {
         {/* TAB B: INTERACTIVE MAP & ROUTE VIEW (Screen 6) */}
         {activeTab === 'map' && (
           <div className="space-y-4">
+            <div className="flex items-center gap-1.5 overflow-x-auto no-print" aria-label="Choose a day">
+              {days.map((d) => (
+                <button
+                  key={d.dayNumber}
+                  onClick={() => setSelectedDayNumber(d.dayNumber)}
+                  className={`px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    d.dayNumber === selectedDay?.dayNumber ? 'bg-blue-600 text-white shadow-xs' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Day {d.dayNumber}
+                </button>
+              ))}
+            </div>
             <InteractiveMap
-              stops={selectedDay?.activities || []}
-              dayTitle={`Day ${selectedDay?.dayNumber ?? 1} - ${selectedDay?.title || 'Route'}`}
+              day={selectedDay}
+              hotels={currentItinerary.hotels}
+              restaurants={currentItinerary.restaurants}
+              focus={mapFocus}
+              mapStatus={mapStatus}
+              onRetryRoutes={() => updateMap({ force: true })}
+              title={`Day ${selectedDay?.dayNumber ?? 1} - ${selectedDay?.title || 'Route'}`}
             />
           </div>
         )}
@@ -489,7 +534,7 @@ const ItineraryPage = () => {
                 <HotelCard
                   key={hotel.id || idx}
                   hotel={hotel}
-                  onSelectOnMap={() => setActiveTab('map')}
+                  onSelectOnMap={showOnMap('stay')}
                 />
               ))}
             </div>
@@ -523,7 +568,7 @@ const ItineraryPage = () => {
                 <RestaurantCard
                   key={restaurant.id || idx}
                   restaurant={restaurant}
-                  onSelectOnMap={() => setActiveTab('map')}
+                  onSelectOnMap={showOnMap('food')}
                 />
               ))}
             </div>

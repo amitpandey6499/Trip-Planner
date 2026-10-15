@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { ACTIVITY_CATEGORIES, BUDGET_TIER_VALUES, CURRENCY, ITINERARY_SOURCES, LIMITS } from '../constants.js';
+import { ACTIVITY_CATEGORIES, BUDGET_TIER_VALUES, CURRENCY, ITINERARY_SOURCES, LIMITS, LOCATION_SOURCES, ROUTE_PROVIDERS } from '../constants.js';
 import { isValidIsoDate } from '../utils/dates.js';
 import { CoordinatesSchema, money, optionalUrl } from './common.js';
 
@@ -19,6 +19,30 @@ const optionalShortText = (max) => z.string().trim().max(max).optional().catch(u
 const rating = z.coerce.number().min(0).max(5).optional().catch(undefined);
 const coordinates = CoordinatesSchema.optional().catch(undefined);
 const tagList = z.array(z.string().trim().min(1).max(60)).max(12).catch([]);
+const locationSource = z.enum(LOCATION_SOURCES).optional().catch(undefined);
+const latLng = z.tuple([z.number().min(-90).max(90), z.number().min(-180).max(180)]);
+
+/** One day's route between its stops (Part 8). Filled by the server's map service, never by the AI. */
+export const DayRouteSchema = z.object({
+  provider: z.enum(ROUTE_PROVIDERS),
+  distanceKm: z.number().min(0).catch(0),
+  durationMin: z.number().min(0).catch(0),
+  // activity ids of the stops, in order; legs[i] goes from stopIds[i] to stopIds[i + 1]
+  stopIds: z.array(z.string().max(40)).max(30).catch([]),
+  legs: z.array(z.object({ distanceKm: z.number().min(0), durationMin: z.number().min(0) })).max(30).catch([]),
+  geometry: z.array(latLng).max(LIMITS.MAX_ROUTE_POINTS).catch([]),
+  // fingerprint of the stops the route was made for; a changed day gets a new route
+  signature: z.string().max(40),
+});
+
+/** Summary of the last map update (Part 8). */
+export const MapInfoSchema = z.object({
+  version: z.number().int(),
+  updatedAt: z.string().max(40),
+  located: z.number().int().min(0),
+  total: z.number().int().min(0),
+  notice: z.string().max(300).optional(),
+});
 
 export const ActivitySchema = z.object({
   id: z.string().optional(),
@@ -31,6 +55,7 @@ export const ActivitySchema = z.object({
   cost: money.default(0),
   tips: optionalShortText(500),
   coordinates,
+  locationSource,
 });
 
 export const DaySchema = z.object({
@@ -41,6 +66,7 @@ export const DaySchema = z.object({
   description: shortText(500).default(''),
   estimatedDailyExpense: money.default(0),
   activities: z.array(ActivitySchema).min(1, 'Every day needs at least one activity.').max(15),
+  route: DayRouteSchema.optional().catch(undefined),
 });
 
 export const HotelSchema = z.object({
@@ -55,6 +81,7 @@ export const HotelSchema = z.object({
   imageUrl: optionalUrl,
   distance: optionalShortText(80),
   coordinates,
+  locationSource,
 });
 
 export const RestaurantSchema = z.object({
@@ -69,6 +96,7 @@ export const RestaurantSchema = z.object({
   imageUrl: optionalUrl,
   distance: optionalShortText(80),
   coordinates,
+  locationSource,
 });
 
 export const BudgetBreakdownSchema = z.object({
@@ -108,7 +136,7 @@ export const ItinerarySchema = z.object({
   model: z.string().trim().max(60).optional().catch(undefined),
   generatedAt: z.string().trim().max(40).optional().catch(undefined),
   // Filled by later parts. Optional, so trips saved before those parts stay valid.
-  routes: z.array(z.unknown()).optional(), // Part 8
+  map: MapInfoSchema.optional().catch(undefined), // Part 8 (routes live on each day)
   weather: z.array(z.unknown()).optional(), // Part 11
   packingList: z.array(z.unknown()).optional(), // Part 11
   transportOptions: z.array(z.unknown()).optional(), // Part 11

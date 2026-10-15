@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { defaultTripDates, normalizeItinerary } from '@tripplanner/shared';
+import { defaultTripDates, needsMapUpdate, normalizeItinerary } from '@tripplanner/shared';
 import { tripApi } from '../services/api.js';
 import { useAuth } from './AuthContext';
 
@@ -93,6 +93,17 @@ export const TripProvider = ({ children }) => {
   const [lastMeta, setLastMeta] = useState(null);
   // goes up by one after every successful generation (the itinerary page celebrates new plans only)
   const [generationId, setGenerationId] = useState(0);
+  // Part 9: live progress of the running generation { destination, total, days: [{ index, day }], stage, message, percent, startedAt }
+  const [generation, setGeneration] = useState(null);
+  const generationAbort = useRef(null);
+  // Part 9: number of the day that is being re-planned right now
+  const [dayLoading, setDayLoading] = useState(null);
+  // Part 8: map update { state: 'idle' | 'working' | 'done' | 'error', message?, percent?, notice? }
+  const [mapStatus, setMapStatus] = useState({ state: 'idle' });
+  // Goes up whenever a DIFFERENT plan is shown (generated, loaded, a day changed, saved, cleared).
+  // Map updates do not change it, so a slow map answer for an old plan is never applied to a new one.
+  const [planRevision, setPlanRevision] = useState(0);
+  const bumpPlan = useCallback(() => setPlanRevision((n) => n + 1), []);
   const [savedTrips, setSavedTrips] = useState([]);
   const [loading, setLoading] = useState(false); // generating an itinerary
   const [tripLoading, setTripLoading] = useState(false); // opening one saved trip
@@ -123,17 +134,48 @@ export const TripProvider = ({ children }) => {
   }, []);
 
   /**
-   * Generate an itinerary.
+   * Generate an itinerary (live: progress and days arrive while the AI writes — Part 9).
    *   tripId → editing that saved trip ("Update Trip" overwrites it, no duplicate)
    *   fresh  → skip the server's AI cache (Regenerate button)
+   * Rejects with an AbortError when the user presses Cancel.
    */
   const generateTrip = useCallback(
     async (preferences, { tripId = null, fresh = false } = {}) => {
+      generationAbort.current?.abort();
+      const controller = new AbortController();
+      generationAbort.current = controller;
+      setGeneration({
+        destination: preferences.destination,
+        total: preferences.durationDays ?? null,
+        days: [],
+        stage: 'start',
+        message: 'Sending your trip details...',
+        percent: 2,
+        startedAt: Date.now(),
+      });
+      const onEvent = (name, data) => {
+        if (controller.signal.aborted) return;
+        if (name === 'progress') {
+          setGeneration((g) => g && { ...g, stage: data.stage, message: data.message ?? g.message, percent: Math.max(g.percent, data.percent ?? 0) });
+        } else if (name === 'day') {
+          setGeneration(
+            (g) =>
+              g && {
+                ...g,
+                total: data.total ?? g.total,
+                days: [...g.days.filter((d) => d.index !== data.index), { index: data.index, day: data.day }].sort((a, b) => a.index - b.index),
+              },
+          );
+        } else if (name === 'reset') {
+          setGeneration((g) => g && { ...g, days: [] });
+        }
+      };
+
       try {
         setLoading(true);
         setError(null);
         setCurrentPreferences(preferences);
-        const res = await tripApi.generate(preferences, { fresh });
+        const res = await tripApi.generate(preferences, { fresh, onEvent, signal: controller.signal });
         // The server returns validated preferences (endDate filled in, defaults applied).
         setCurrentPreferences(res.preferences ?? preferences);
         setPlanPreferences(res.preferences ?? preferences);
@@ -142,16 +184,61 @@ export const TripProvider = ({ children }) => {
         setIsDirty(true);
         setLastMeta(res.meta ?? null);
         setGenerationId((n) => n + 1);
+        bumpPlan();
         showToast(res.meta?.cached ? `Loaded a saved AI plan for ${res.data.destination}` : `Itinerary generated for ${res.data.destination}!`);
         return res.data;
       } catch (err) {
-        setError(err.message || 'Something went wrong');
+        if (err.name === 'AbortError') {
+          showToast('Planning cancelled');
+        } else {
+          setError(err.message || 'Something went wrong');
+        }
         throw err;
       } finally {
-        setLoading(false);
+        if (generationAbort.current === controller) {
+          generationAbort.current = null;
+          setLoading(false);
+          setGeneration(null);
+        }
       }
     },
-    [showToast],
+    [showToast, bumpPlan],
+  );
+
+  /** Stop the running generation (the server stops asking the AI too). */
+  const cancelGeneration = useCallback(() => generationAbort.current?.abort(), []);
+
+  /**
+   * Part 9 — a new plan for ONE day; the rest of the trip stays. The result is unsaved (banner: Save changes).
+   *   pace → a different pace just for this day; note → a wish for the AI ("more relaxed")
+   */
+  const regenerateDay = useCallback(
+    async (dayNumber, { pace, note } = {}) => {
+      if (!currentItinerary || !planPreferences) return null;
+      try {
+        setDayLoading(dayNumber);
+        setError(null);
+        const res = await tripApi.regenerateDay({
+          preferences: planPreferences,
+          itinerary: currentItinerary,
+          dayNumber,
+          ...(pace && { pace }),
+          ...(note?.trim() && { note: note.trim() }),
+        });
+        setCurrentItinerary(res.data);
+        setIsDirty(true);
+        setLastMeta((m) => ({ ...(m ?? {}), cached: false, notice: res.meta?.notice ?? null, ai: res.meta?.ai ?? m?.ai ?? null }));
+        bumpPlan();
+        showToast(`Day ${dayNumber} has a new plan${res.meta?.source === 'gemini' ? ' from Gemini' : ''}`);
+        return res.data;
+      } catch (err) {
+        setError(`Could not change Day ${dayNumber}: ${err.message}`);
+        return null;
+      } finally {
+        setDayLoading(null);
+      }
+    },
+    [currentItinerary, planPreferences, bumpPlan, showToast],
   );
 
   /** Save (first time) or update (already saved) the current itinerary. Returns the saved trip. */
@@ -176,6 +263,7 @@ export const TripProvider = ({ children }) => {
       setCurrentTripId(res.data.id);
       setCurrentItinerary(res.data.itinerary ?? currentItinerary);
       setIsDirty(false);
+      bumpPlan(); // a saved trip keeps its map with the trip (Part 8)
       showToast(currentTripId ? 'Trip updated!' : 'Trip successfully saved to your dashboard!');
       fetchTrips();
       return res.data;
@@ -185,7 +273,7 @@ export const TripProvider = ({ children }) => {
     } finally {
       setSaving(false);
     }
-  }, [currentItinerary, planPreferences, currentPreferences, currentTripId, fetchTrips, showToast]);
+  }, [currentItinerary, planPreferences, currentPreferences, currentTripId, fetchTrips, showToast, bumpPlan]);
 
   const deleteTrip = useCallback(
     async (id) => {
@@ -197,13 +285,14 @@ export const TripProvider = ({ children }) => {
           setCurrentItinerary(null);
           setPlanPreferences(null);
           setIsDirty(false);
+          bumpPlan();
         }
         showToast('Trip deleted successfully');
       } catch (err) {
         setError(`Failed to delete trip: ${err.message}`);
       }
     },
-    [currentTripId, showToast],
+    [currentTripId, showToast, bumpPlan],
   );
 
   /** Rename a saved trip (PUT /api/trips/:id { title }). Throws on failure. */
@@ -231,6 +320,7 @@ export const TripProvider = ({ children }) => {
       setCurrentTripId(trip.id);
       setIsDirty(false);
       setLastMeta(null);
+      bumpPlan();
       return trip;
     } catch (err) {
       setError(err.response?.status === 404 ? 'This trip does not exist or is not yours.' : `Failed to load trip: ${err.message}`);
@@ -238,7 +328,7 @@ export const TripProvider = ({ children }) => {
     } finally {
       setTripLoading(false);
     }
-  }, []);
+  }, [bumpPlan]);
 
   // Trips belong to the logged-in user: reload on login, clear everything on logout / user switch.
   const previousUserId = useRef(null);
@@ -271,8 +361,71 @@ export const TripProvider = ({ children }) => {
       }
       fetchTrips();
     }
+    bumpPlan();
     setDraftReady(Boolean(userId));
-  }, [user?.id, fetchTrips]);
+  }, [user?.id, fetchTrips, bumpPlan]);
+
+  // ── Part 8: put the open plan on the map (place positions + road routes) ──────────────
+  // The newest values, for the async map update (it must not use the values of an old render).
+  const latest = useRef({});
+  latest.current = { currentItinerary, currentTripId, isDirty, planRevision };
+  const mapAbort = useRef(null);
+
+  /**
+   * Ask the server to locate places and make road routes for the open plan.
+   * A saved, unchanged trip is updated on the server (stored with the trip);
+   * an unsaved plan is updated in memory (and saved together with it later).
+   *   force → ask the routing service again for days that only have estimated routes
+   */
+  const updateMap = useCallback(async ({ force = false, attempt = 1 } = {}) => {
+    const { currentItinerary: itinerary, currentTripId: tripId, isDirty: dirty, planRevision: revision } = latest.current;
+    if (!itinerary) return;
+    mapAbort.current?.abort();
+    const controller = new AbortController();
+    mapAbort.current = controller;
+    setMapStatus({ state: 'working', message: 'Preparing the map...', percent: 5 });
+    const onEvent = (name, data) => {
+      if (name !== 'progress' || controller.signal.aborted) return;
+      const share = data.total ? data.done / data.total : 1;
+      const percent = data.stage === 'places' ? 5 + share * 65 : data.stage === 'routes' ? 70 + share * 30 : 100;
+      setMapStatus({ state: 'working', message: data.message, percent: Math.round(percent) });
+    };
+    try {
+      const savedTrip = Boolean(tripId) && !dirty;
+      const res = savedTrip
+        ? await tripApi.updateSavedTripMap(tripId, { force, onEvent, signal: controller.signal })
+        : await tripApi.updateMap(itinerary, { force, onEvent, signal: controller.signal });
+      // Another plan was opened meanwhile → this answer belongs to the old one.
+      if (controller.signal.aborted || latest.current.planRevision !== revision) return;
+      const next = savedTrip ? (res.stale ? null : res.data.itinerary) : res.data;
+      if (next) setCurrentItinerary(next);
+      setMapStatus({ state: 'done', notice: next?.map?.notice ?? null });
+      // Very long trips: places are located in rounds (the services allow ~1 request per second).
+      if (next && res.stats?.pending > 0 && !res.stats.serviceDown && attempt < 3) updateMap({ attempt: attempt + 1 });
+    } catch (err) {
+      if (err.name === 'AbortError') return;
+      setMapStatus({ state: 'error', message: err.message });
+    } finally {
+      if (mapAbort.current === controller) mapAbort.current = null;
+    }
+  }, []);
+
+  // Every newly shown plan is checked once: only missing positions / routes are fetched.
+  useEffect(() => {
+    if (!draftReady) return undefined;
+    const itinerary = latest.current.currentItinerary;
+    if (!itinerary) {
+      mapAbort.current?.abort();
+      setMapStatus({ state: 'idle' });
+      return undefined;
+    }
+    if (!needsMapUpdate(itinerary)) {
+      setMapStatus({ state: 'done', notice: itinerary.map?.notice ?? null });
+      return undefined;
+    }
+    const timer = setTimeout(() => updateMap(), 300); // let the page show first
+    return () => clearTimeout(timer);
+  }, [planRevision, draftReady, updateMap]);
 
   // Keep the draft in sessionStorage up to date.
   useEffect(() => {
@@ -304,6 +457,12 @@ export const TripProvider = ({ children }) => {
         isDirty,
         lastMeta,
         generationId,
+        generation,
+        cancelGeneration,
+        regenerateDay,
+        dayLoading,
+        mapStatus,
+        updateMap,
         draftReady,
         savedTrips,
         loading,

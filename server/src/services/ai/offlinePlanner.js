@@ -77,7 +77,7 @@ const planHubs = (dest, days) => {
 const makeEateryPicker = (dest, diet) => {
   const used = new Map();
   const wantsVeg = VEG_DIETS.includes(diet);
-  return (hubId, zone) => {
+  const pick = (hubId, zone) => {
     const inHub = dest.eateries.filter((e) => e.hub === hubId || e.hub === 'main');
     const pool = (wantsVeg ? inHub.filter((e) => e.veg) : inHub).length ? (wantsVeg ? inHub.filter((e) => e.veg) : inHub) : inHub;
     const best = [...pool].sort((a, b) => {
@@ -88,6 +88,9 @@ const makeEateryPicker = (dest, diet) => {
     if (best) used.set(best.name, (used.get(best.name) ?? 0) + 1);
     return best;
   };
+  // already used elsewhere in the trip → picked last
+  pick.markUsed = (name) => used.set(name, (used.get(name) ?? 0) + 1);
+  return pick;
 };
 
 const dietTip = (diet, eatery) => {
@@ -98,11 +101,8 @@ const dietTip = (diet, eatery) => {
   return eatery.generic ? 'Many local places serve this; pick a busy one.' : undefined;
 };
 
-/**
- * @param {object} prefs validated TripPreferences
- * @returns raw itinerary (run normalizeItinerary on it)
- */
-export const planOffline = (prefs) => {
+/** Everything the planner derives from the preferences (shared by the full plan and "regenerate one day"). */
+const buildContext = (prefs, { pace } = {}) => {
   const dest = findOfflineDestination(prefs.destination);
   if (!dest) throw new OfflineUnsupportedError(prefs.destination);
 
@@ -110,7 +110,7 @@ export const planOffline = (prefs) => {
   const travelers = prefs.travelersCount;
   const tier = prefs.budgetCategory ?? 'Moderate';
   const diet = prefs.dietaryPreference ?? 'No Restrictions';
-  const perDay = PLACES_PER_DAY[prefs.travelStyle] ?? 3;
+  const perDay = PLACES_PER_DAY[pace ?? prefs.travelStyle] ?? 3;
   const interests = prefs.interests ?? [];
   const interestSet = new Set(interests);
 
@@ -133,7 +133,13 @@ export const planOffline = (prefs) => {
   }));
   const capacityOf = (d) => Math.max(1, perDay - (d.isFirst ? 1 : 0) - (d.isLast ? 1 : 0) - (d.isTransfer ? 2 : 0));
 
-  // 3. Choose places per hub.
+  const mealCost = (eatery) => roundTo10((eatery.costForTwo / 2) * travelers * MEAL_FACTOR[tier]);
+  const transportCost = dest.transportPerDay[tier] * groups(travelers);
+  return { prefs, dest, days, travelers, tier, diet, interests, ranked, zoneOrder, dayHubs, dayInfo, capacityOf, mealCost, transportCost };
+};
+
+/** Step 3: choose the places (and whole-day excursions) of every day. */
+const assignPlaces = ({ dest, dayInfo, ranked, zoneOrder, capacityOf }) => {
   for (const hub of dest.hubs) {
     const hubDays = dayInfo.filter((d) => d.hub.id === hub.id);
     if (hubDays.length === 0) continue;
@@ -158,13 +164,15 @@ export const planOffline = (prefs) => {
       cursor += day.places.length;
     }
   }
+};
 
-  // 4. Timeline for each day.
-  const pickEatery = makeEateryPicker(dest, diet);
-  const mealCost = (eatery) => roundTo10((eatery.costForTwo / 2) * travelers * MEAL_FACTOR[tier]);
-  const transportCost = dest.transportPerDay[tier] * groups(travelers);
+/** Positions in curated data are trusted (Part 8: the map does not look them up again). */
+const curated = (place) => ({ ...place, locationSource: place.coordinates ? 'curated' : 'none' });
 
-  const planDay = (day, dayIndex) => {
+/** Step 4: the timeline of one day (activities with times, meals, travel and costs). */
+const makeDayPlanner = (ctx, pickEatery) => {
+  const { dest, travelers, tier, diet, mealCost, transportCost } = ctx;
+  return (day, dayIndex) => {
     const { hub } = day;
     const activities = [];
     const add = (activity) => activities.push(activity);
@@ -330,10 +338,20 @@ export const planOffline = (prefs) => {
       dayNumber: dayIndex + 1,
       title: title.length > 110 ? `${title.slice(0, 107)}...` : title,
       description: highlights.length ? `Today: ${highlights.join(', ')}.` : 'An easy day at your own pace.',
-      activities,
+      activities: activities.map(curated),
     };
   };
+};
 
+/**
+ * @param {object} prefs validated TripPreferences
+ * @returns raw itinerary (run normalizeItinerary on it)
+ */
+export const planOffline = (prefs) => {
+  const ctx = buildContext(prefs);
+  const { dest, days, travelers, tier, diet, interests, dayHubs, dayInfo } = ctx;
+  assignPlaces(ctx);
+  const planDay = makeDayPlanner(ctx, makeEateryPicker(dest, diet));
   const itineraryDays = dayInfo.map(planDay);
 
   // 5. Stays (honest: area + typical price, not a made-up hotel name) and named eateries.
@@ -348,6 +366,7 @@ export const planOffline = (prefs) => {
       address: `${hub.stayArea}, ${dest.region}`,
       distance: 'Typical price per room per night (estimate)',
       coordinates: { lat: hub.lat, lng: hub.lng },
+      locationSource: 'curated',
     })),
   );
 
@@ -364,6 +383,7 @@ export const planOffline = (prefs) => {
       dietaryTags: [e.veg ? 'Pure vegetarian' : 'Veg options available'],
       address: dest.hubs.find((h) => h.id === e.hub)?.name ?? dest.name,
       coordinates: { lat: e.lat, lng: e.lng },
+      locationSource: 'curated',
     }));
 
   const pace = (prefs.travelStyle ?? 'Balanced').toLowerCase();
@@ -383,4 +403,56 @@ export const planOffline = (prefs) => {
     hotels,
     restaurants,
   };
+};
+
+/**
+ * Part 9 — "Regenerate this day" without AI: a new plan for one day using curated places that are
+ * not planned on any other day (and, if possible, not on this day either).
+ *
+ * @param {object} prefs      validated TripPreferences
+ * @param {object} itinerary  current normalized itinerary
+ * @param {number} dayNumber  1-based
+ * @param {{ pace?: string }} options  a different pace just for this day
+ * @returns {{ day: object, notice: string | null }}  raw day (normalizeItinerary dates it and adds up costs)
+ */
+export const replanOfflineDay = (prefs, itinerary, dayNumber, { pace } = {}) => {
+  const ctx = buildContext(prefs, { pace });
+  const index = dayNumber - 1;
+  const day = ctx.dayInfo[index];
+  if (!day) throw new Error(`Day ${dayNumber} is not part of this trip.`);
+
+  const names = (d) => (d?.activities ?? []).map((a) => a.placeName);
+  const elsewhere = new Set(itinerary.days.filter((_, i) => i !== index).flatMap(names));
+  const today = new Set(names(itinerary.days[index]));
+  // Eateries in "Lunch at X" / "Dinner: X" names.
+  const mentions = (set, place) => [...set].some((name) => name === place.name || name.endsWith(` ${place.name}`) || name.endsWith(`: ${place.name}`));
+
+  const nearby = ctx.ranked.filter((p) => (p.hub === day.hub.id || p.hub === 'main') && !mentions(elsewhere, p));
+  const fresh = nearby.filter((p) => !mentions(today, p));
+  const pool = fresh.length ? fresh : nearby;
+  const middle = !day.isFirst && !day.isLast && !day.isTransfer;
+
+  const wasExcursion = ctx.ranked.some((p) => p.fullDay && mentions(today, p));
+  const excursions = pool.filter((p) => p.fullDay);
+  const regular = pool.filter((p) => !p.fullDay);
+  // A pace chosen for this day means "this many places": a whole-day excursion only when the user did not
+  // ask for a pace and the day already was one (or nothing else is left).
+  if (middle && excursions.length && (regular.length === 0 || (!pace && wasExcursion))) {
+    day.excursion = excursions[0];
+  } else {
+    day.places = regular
+      .slice(0, ctx.capacityOf(day))
+      .sort((a, b) => ctx.zoneOrder.indexOf(`${a.hub}:${a.zone}`) - ctx.zoneOrder.indexOf(`${b.hub}:${b.zone}`))
+      .sort((a, b) => BEST_ORDER[a.best] - BEST_ORDER[b.best]);
+  }
+
+  // Prefer eateries the rest of the trip does not use yet.
+  const pickEatery = makeEateryPicker(ctx.dest, ctx.diet);
+  for (const eatery of ctx.dest.eateries) if (mentions(elsewhere, eatery)) pickEatery.markUsed(eatery.name);
+
+  const planned = makeDayPlanner(ctx, pickEatery)(day, index);
+  const notice = fresh.length
+    ? null
+    : `No other places are left near ${day.hub.name} that are not already in your trip, so Day ${dayNumber} was rearranged instead.`;
+  return { day: planned, notice };
 };

@@ -60,7 +60,14 @@ const buildStatusCards = (status, error, aiUsage) => {
       label: services.googlePlaces ? 'Configured' : 'Optional',
       detail: services.googlePlaces ? 'Live hotel search enabled.' : 'Using the curated hotel and restaurant list.',
     },
-    { title: 'Maps', state: 'ok', label: 'Active', detail: 'Leaflet with OpenStreetMap tiles.' },
+    {
+      title: 'Maps & routes',
+      state: services.map?.enabled ? 'ok' : 'warn',
+      label: services.map?.enabled ? 'Active' : 'Estimates only',
+      detail: services.map?.enabled
+        ? `Places: ${services.map.geocoder} • Road routes: ${services.map.router} • Leaflet + OpenStreetMap tiles.`
+        : 'MAP_ENABLED=false: distances are straight-line estimates.',
+    },
   ];
 };
 

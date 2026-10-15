@@ -118,3 +118,36 @@ export const deleteTrip = async (tripId, ownerId) => {
 };
 
 export const countTrips = (ownerId) => Trip.countDocuments({ owner: ownerId });
+
+const factsOf = (trip) => ({
+  destination: trip.destination,
+  startDate: trip.startDate,
+  endDate: trip.endDate,
+  durationDays: trip.durationDays,
+  travelersCount: trip.travelersCount,
+  totalBudget: trip.totalBudget,
+  budgetCategory: trip.budgetCategory,
+});
+
+/**
+ * Part 8: run `work(itinerary)` (the map update) for a saved trip and store the result.
+ * If the trip was saved again while the map was being made, the newer version wins (nothing is overwritten).
+ * @returns {{ trip, stats, stale: boolean }}
+ */
+export const updateTripMap = async (tripId, ownerId, work) => {
+  const trip = await findOwned(tripId, ownerId);
+  if (!trip) throw ApiError.notFound('Trip not found.');
+  if (!trip.itinerary) throw ApiError.badRequest('This trip has no itinerary yet.');
+  const loadedAt = trip.updatedAt?.getTime();
+  const itinerary = normalizeOrReject(trip.itinerary, factsOf(trip));
+
+  const { itinerary: withMap, stats } = await work(itinerary);
+
+  const latest = await findOwned(tripId, ownerId);
+  if (!latest) throw ApiError.notFound('Trip not found.');
+  if (latest.updatedAt?.getTime() !== loadedAt) return { trip: latest.toJSON(), stats, stale: true };
+  latest.itinerary = withMap;
+  latest.markModified('itinerary');
+  await latest.save();
+  return { trip: latest.toJSON(), stats, stale: false };
+};

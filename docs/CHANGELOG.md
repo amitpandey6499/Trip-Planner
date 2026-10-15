@@ -4,6 +4,63 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Parts 8 + 9 — Real map + Streaming / regenerate one day (tags `part-8`, `part-9`, ek hi commit)
+
+**Part 7 (deploy) skip kiya** (tumhare kehne pe) — Part 18 mein final deploy ke saath hoga. Part 8 aur 9 ko uski zarurat nahi.
+Dono parts ek commit mein kyunki "ek din dobara banao" ke baad us din ka naya road route (Part 8) chahiye.
+
+### Chalane ke liye
+1. `npm install` (koi naya package nahi; Leaflet CSS ab bundle se aati hai)
+2. `npm run dev` → koi trip banao → **progress window** mein din ek-ek karke → itinerary → **Map View** mein road route, km, time
+3. Map services free hain, key nahi chahiye. Unki **usage policy** padh lo: `docs/MAP_SERVICES.md`
+   (Nominatim: https://operations.osmfoundation.org/policies/nominatim/ — max 1 request/second, app ki pehchaan, cache;
+   server ye sab apne-aap karta hai)
+
+**Naye env variables (sab optional):** `MAP_ENABLED` (true), `NOMINATIM_URL`, `NOMINATIM_EMAIL`, `OSRM_URL`, `GEO_USER_AGENT`,
+`GEO_TIMEOUT_SECONDS` (10), `GEO_CACHE_DAYS` (60), `MAP_RATE_LIMIT_PER_MIN` (20).
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Map pe stops ke beech seedhi dashed line, distance "straight-line" | asli **road route** (OSRM), road km + driving time, har stop ke beech leg |
+| AI ke coordinates andaza (galat jagah pin bhi) | Nominatim se asli position; 300 km se door wale andaze hata diye; "approx." label |
+| Map pe sirf us din ke stops | Stays + Restaurants pins (toggle), "View on Map" → us pin pe zoom + popup |
+| Map galat jagah khulta (Manali default) | `fitBounds`: din ke saare stops + route screen mein |
+| Leaflet CSS unpkg CDN se (internet na ho to map toot jaata) | npm package se bundle |
+| Generate pe 30–60 s sirf spinner | **live progress**: "Day 2 of 4 is ready", din ek-ek karke, **Cancel** |
+| Ek din pasand nahi → poora trip dobara | **"New plan for this day"** (pace + wish), baaki din same |
+| Gemini timeout poore jawab pe | streaming mein "aakhri piece ke baad" timeout (lamba jawab nahi katta) |
+
+### Naye files
+- `shared/src/utils/map.js` (haversine, mapStops, routeSignature, estimateRoute, needsMapUpdate, formatKm/Duration), `shared/src/schemas/requests.js`
+- `server/src/services/geo/{geoHttp,geocoder,router,mapService}.js`, `server/src/models/GeoCache.js`
+- `server/src/controllers/mapController.js`, `server/src/routes/mapRoutes.js`, `server/src/utils/stream.js` (SSE)
+- `server/src/services/ai/dayStream.js` (adhoore JSON se din nikalna)
+- `server/test/{map,stream}.test.js`, `shared/test/map.test.js`
+- `client/src/services/{stream,events}.js`, `client/src/components/GenerationOverlay.jsx`
+- `docs/MAP_SERVICES.md`
+
+### Data contract
+- `day.route` = `{ provider: osrm|estimate|none, distanceKm, durationMin, stopIds, legs, geometry, signature }`,
+  `activity/hotel/restaurant.locationSource` = `curated|geocoded|ai|none`, `itinerary.map` = summary. Sab optional — purane trips valid.
+- Stays / restaurants ko ab `id` milta hai (`hotel-1`, `restaurant-1`).
+- Purana khaali `itinerary.routes` field hata (kabhi use nahi hua).
+
+### Doosre parts pe asar
+- **Part 10:** destinations ke liye bhi geocoder + cache ready.
+- **Part 11:** "How to reach" ke liye `haversineKm`, router reuse.
+- **Part 12 (editor):** activity hilao → signature badlega → sirf us din ka route dobara (pehle se bana hai).
+- **Part 13 (chat):** `regenerateDay` jaisa hi "AI change propose kare" flow.
+- **Part 18 (deploy):** SSE ke liye proxy buffering band; `GEO_USER_AGENT` mein site URL.
+
+### Tests
+- Server **68** tests (naye: map 10, streaming + regenerate day 11), shared **36** (naye: map 7).
+- Browser: AI mode (fake Gemini jo dheere stream karta hai + fake Nominatim/OSRM) 8 checks, offline mode 3, purane 49 checks.
+- **Sach:** asli Nominatim / OSRM / Gemini se yahan (sandbox) connect nahi ho sakta — test fake services se hue jinki API same hai.
+  Laptop pe ek baar Map View khol ke check kar lena.
+
+---
+
 ## Parts 5 + 6 — Trip URLs + Real Gemini AI (tags `part-5`, `part-6`, ek hi commit)
 
 Part 6 ka "regenerate / unsaved changes" Part 5 ke URLs pe tika hai, isliye dono ek saath.

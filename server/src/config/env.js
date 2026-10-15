@@ -27,6 +27,13 @@ const secret = z
   .optional()
   .transform((value) => (isPlaceholder(value) ? '' : value));
 
+/** http(s) URL without a trailing slash. */
+const httpUrl = z
+  .string()
+  .trim()
+  .regex(/^https?:\/\/\S+$/, 'must be an http(s) URL')
+  .transform((url) => url.replace(/\/+$/, ''));
+
 const DEV_JWT_SECRET = 'dev-only-secret-do-not-use-in-production-0123456789';
 
 const envSchema = z
@@ -61,6 +68,20 @@ const envSchema = z
 
     // Places (optional)
     GOOGLE_PLACES_API_KEY: secret,
+
+    // Map (Part 8): place lookup (Nominatim) + road routes (OSRM). Both are free OpenStreetMap
+    // services with usage policies (max 1 request/second, identify the app, cache) — see docs/MAP_SERVICES.md.
+    MAP_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    NOMINATIM_URL: httpUrl.default('https://nominatim.openstreetmap.org'),
+    NOMINATIM_EMAIL: z.string().trim().default(''),
+    OSRM_URL: httpUrl.default('https://routing.openstreetmap.de/routed-car'),
+    GEO_USER_AGENT: z.string().trim().default(''),
+    GEO_TIMEOUT_SECONDS: z.coerce.number().int().min(2).max(60).default(10),
+    GEO_CACHE_DAYS: z.coerce.number().int().min(1).max(365).default(60),
+    MAP_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(20),
 
     // Rate limiting
     RATE_LIMIT_WINDOW_MIN: z.coerce.number().positive().default(15),
@@ -119,10 +140,20 @@ export const config = Object.freeze({
     cacheDays: env.AI_CACHE_DAYS,
   }),
   googlePlacesKey: env.GOOGLE_PLACES_API_KEY,
+  map: Object.freeze({
+    enabled: env.MAP_ENABLED,
+    nominatimUrl: env.NOMINATIM_URL,
+    nominatimEmail: env.NOMINATIM_EMAIL,
+    osrmUrl: env.OSRM_URL,
+    userAgent: env.GEO_USER_AGENT,
+    timeoutMs: env.GEO_TIMEOUT_SECONDS * 1000,
+    cacheDays: env.GEO_CACHE_DAYS,
+  }),
   rateLimit: Object.freeze({
     windowMs: env.RATE_LIMIT_WINDOW_MIN * 60 * 1000,
     max: env.RATE_LIMIT_MAX,
     aiPerMinute: env.AI_RATE_LIMIT_PER_MIN,
+    mapPerMinute: env.MAP_RATE_LIMIT_PER_MIN,
     authMax: env.AUTH_RATE_LIMIT_MAX,
   }),
 });
@@ -133,4 +164,9 @@ export const serviceStatus = () => ({
   aiDailyLimit: config.gemini.dailyLimit,
   googlePlaces: Boolean(config.googlePlacesKey),
   demoLogin: config.auth.demoLoginEnabled,
+  map: {
+    enabled: config.map.enabled,
+    geocoder: config.map.enabled ? new URL(config.map.nominatimUrl).host : null,
+    router: config.map.enabled ? new URL(config.map.osrmUrl).host : null,
+  },
 });

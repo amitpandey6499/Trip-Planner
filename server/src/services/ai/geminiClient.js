@@ -3,7 +3,9 @@ import { config } from '../../config/env.js';
 
 /**
  * Thin wrapper around the official @google/genai SDK.
- * The rest of the app only needs  client.generateJson({ system, prompt, schema }) → object.
+ * The rest of the app only needs
+ *   client.generateJson({ system, prompt, schema, signal }) → object
+ *   client.generateJsonStream({ ..., onText(textSoFar) }) → object   (Part 9: text arrives piece by piece)
  *
  * Tests replace the real client with a fake one (setGeminiClientFactory), so the whole
  * AI flow (retry, validation, cache, limits, fallback) is tested without calling Google.
@@ -24,28 +26,78 @@ export const setGeminiClientFactory = (factory) => {
   factoryOverride = factory;
 };
 
+const parseAnswer = (text) => {
+  if (!text) throw new AiResponseError('Gemini returned an empty answer.');
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new AiResponseError('Gemini returned text that is not valid JSON.');
+  }
+};
+
+const timeoutError = () => Object.assign(new Error('Gemini took too long to answer (timeout).'), { name: 'TimeoutError' });
+
 const createRealClient = () => {
   const ai = new GoogleGenAI({ apiKey: config.gemini.apiKey });
+  const requestConfig = ({ system, schema, temperature, abortSignal }) => ({
+    systemInstruction: system,
+    responseMimeType: 'application/json',
+    responseJsonSchema: schema,
+    temperature,
+    ...(abortSignal && { abortSignal }),
+  });
+
   return {
     model: config.gemini.model,
-    async generateJson({ system, prompt, schema, temperature = 0.6 }) {
-      const response = await ai.models.generateContent({
-        model: config.gemini.model,
-        contents: prompt,
-        config: {
-          systemInstruction: system,
-          responseMimeType: 'application/json',
-          responseJsonSchema: schema,
-          temperature,
-          httpOptions: { timeout: config.gemini.timeoutMs },
-        },
-      });
-      const text = response.text;
-      if (!text) throw new AiResponseError('Gemini returned an empty answer.');
+
+    async generateJson({ system, prompt, schema, temperature = 0.6, signal }) {
+      const timeout = AbortSignal.timeout(config.gemini.timeoutMs);
+      const abortSignal = signal ? AbortSignal.any([signal, timeout]) : timeout;
       try {
-        return JSON.parse(text);
-      } catch {
-        throw new AiResponseError('Gemini returned text that is not valid JSON.');
+        const response = await ai.models.generateContent({
+          model: config.gemini.model,
+          contents: prompt,
+          config: requestConfig({ system, schema, temperature, abortSignal }),
+        });
+        return parseAnswer(response.text);
+      } catch (err) {
+        if (timeout.aborted && !signal?.aborted) throw timeoutError();
+        throw err;
+      }
+    },
+
+    // Streaming: the timeout counts from the LAST piece received, so a long answer that keeps
+    // arriving is not cut off, but a stalled one is.
+    async generateJsonStream({ system, prompt, schema, temperature = 0.6, signal, onText }) {
+      const idle = new AbortController();
+      let timer;
+      const arm = () => {
+        clearTimeout(timer);
+        timer = setTimeout(() => idle.abort(), config.gemini.timeoutMs);
+      };
+      arm();
+      const abortSignal = signal ? AbortSignal.any([signal, idle.signal]) : idle.signal;
+      try {
+        const stream = await ai.models.generateContentStream({
+          model: config.gemini.model,
+          contents: prompt,
+          config: requestConfig({ system, schema, temperature, abortSignal }),
+        });
+        let text = '';
+        for await (const chunk of stream) {
+          arm();
+          const piece = chunk.text;
+          if (piece) {
+            text += piece;
+            onText?.(text);
+          }
+        }
+        return parseAnswer(text);
+      } catch (err) {
+        if (idle.signal.aborted && !signal?.aborted) throw timeoutError();
+        throw err;
+      } finally {
+        clearTimeout(timer);
       }
     },
   };

@@ -7,6 +7,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import DemoModeBanner from './components/DemoModeBanner';
 import Toast from './components/Toast';
+import GenerationOverlay from './components/GenerationOverlay';
 import ProtectedRoute from './components/ProtectedRoute';
 import ErrorBoundary from './components/ErrorBoundary';
 
@@ -78,6 +79,7 @@ export const App = () => {
             </main>
             <Footer />
             <Toast />
+            <GenerationOverlay />
           </div>
         </TripProvider>
       </AuthProvider>

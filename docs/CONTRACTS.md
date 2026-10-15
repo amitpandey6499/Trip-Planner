@@ -77,3 +77,40 @@ Optional hain, isliye purane saved trips kabhi invalid nahi honge.
 - Client state (TripContext): `planPreferences` = khule plan ki preferences (Save, Regenerate, Edit); `currentPreferences` = agle **naye** trip ke
   wizard ki shuruaati values (Quick search, Explore). Dono kabhi mix nahi hote.
 - Offline planner ki destinations: `OFFLINE_PLANNER_DESTINATIONS` + `findOfflinePlannerDestination()` (`shared/`) — server planner aur wizard ka hint dono yahi.
+
+## Map data (Part 8)
+Sab optional (purane trips valid). Server ka map service bharta hai, AI kabhi nahi.
+```js
+activity / hotel / restaurant: { coordinates?: { lat, lng }, locationSource?: 'curated' | 'geocoded' | 'ai' | 'none' }
+day.route = {
+  provider: 'osrm' | 'estimate' | 'none',   // estimate = routing service nahi mila / road nahi (islands)
+  distanceKm, durationMin,
+  stopIds: ['d1-a1', 'd1-a3', ...],          // mapStops(day) ke ids, visiting order mein
+  legs: [{ distanceKm, durationMin }],       // legs[i] = stopIds[i] → stopIds[i + 1]
+  geometry: [[lat, lng], ...],               // max LIMITS.MAX_ROUTE_POINTS (400)
+  signature,                                 // routeSignature(stops); din badla → naya route
+}
+itinerary.map = { version, updatedAt, located, total, notice? }
+```
+- `mapStops(day)`: positions wali activities; Transit sirf din ke shuru / end mein (arrival / departure); "All day" travel stop nahi.
+- `needsMapUpdate(itinerary)`: koi place bina `locationSource` ke, ya kisi din ka route nahi / signature purana → true.
+- Endpoints: `POST /api/map/enrich { itinerary, force? }` (unsaved plan) · `POST /api/trips/:id/map { force? }` (saved; result trip mein save,
+  agar beech mein trip dobara save hua to naya version jeetta hai: `stale: true`). Answer: `{ data, stats }`.
+
+## Live events (Part 9)
+`Accept: text/event-stream` bhejo to `POST /api/trips/generate`, `/api/map/enrich`, `/api/trips/:id/map` events bhejte hain:
+```
+event: progress   data: { stage, message, percent? | done, total }
+event: day        data: { index, total, day }        (sirf generate; preview — final result hi asli hai)
+event: reset      data: {}                           (retry shuru: preview days bhool jao)
+event: result     data: <wahi body jo normal JSON answer mein hoti>
+event: error      data: { success: false, status, error, details? }
+```
+Validation / login / rate-limit errors stream shuru hone se pehle normal JSON (400 / 401 / 429) mein aate hain.
+Client: `client/src/services/stream.js` (`postStream`), Cancel = `AbortController` (server pe Gemini call bhi ruk jaati hai).
+
+## Regenerate one day (Part 9)
+`POST /api/trips/regenerate-day` — `RegenerateDaySchema`: `{ preferences, itinerary, dayNumber, pace?, note? (max 300) }`
+→ `{ data: itinerary, meta: { source: 'gemini' | 'offline', notice, ai, dayNumber } }`.
+Sirf woh din badalta hai (date, baaki din, stays, unke routes same); naya din `route` ke bina aata hai → map update.
+Itinerary ke din preferences ke din se alag hon → 400 ("Use Regenerate for the whole trip").

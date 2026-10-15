@@ -4,9 +4,9 @@ import { Map as MapIcon } from 'lucide-react';
 import { useTrip } from '../context/TripContext';
 import InteractiveMap from '../components/InteractiveMap';
 
-/** Map of the itinerary that is open right now (real road routes come in Part 8). */
+/** Map of the itinerary that is open right now: road routes, stays and restaurants (Part 8). */
 export const MapView = () => {
-  const { currentItinerary, currentTripId } = useTrip();
+  const { currentItinerary, currentTripId, mapStatus, updateMap } = useTrip();
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
 
   const days = currentItinerary?.days || [];
@@ -42,7 +42,7 @@ export const MapView = () => {
             </span>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">{currentItinerary.title}</h1>
             <p className="text-xs sm:text-sm text-slate-500">
-              Daily stops in visiting order.{' '}
+              Daily stops in visiting order, with the road route between them.{' '}
               <Link to={currentTripId ? `/trips/${currentTripId}` : '/itinerary'} className="text-blue-600 font-semibold hover:underline">
                 Back to the itinerary
               </Link>
@@ -64,7 +64,14 @@ export const MapView = () => {
           </div>
         </div>
 
-        <InteractiveMap stops={currentDay.activities || []} dayTitle={`Day ${currentDay.dayNumber} - ${currentDay.title}`} />
+        <InteractiveMap
+          day={currentDay}
+          hotels={currentItinerary.hotels}
+          restaurants={currentItinerary.restaurants}
+          mapStatus={mapStatus}
+          onRetryRoutes={() => updateMap({ force: true })}
+          title={`Day ${currentDay.dayNumber} - ${currentDay.title}`}
+        />
       </div>
     </div>
   );
