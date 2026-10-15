@@ -43,6 +43,13 @@ const tripSchema = new mongoose.Schema(
     itinerary: { type: mongoose.Schema.Types.Mixed, default: null },
     // Part 11: ids of the packing-list items the user ticked
     packingChecked: { type: [String], default: [] },
+    // Part 14: public read-only link /share/:slug (off by default). The slug is random, so links can not be guessed.
+    share: {
+      enabled: { type: Boolean, default: false },
+      slug: { type: String, trim: true },
+      createdAt: { type: Date },
+      views: { type: Number, default: 0 },
+    },
     schemaVersion: { type: Number, default: 1 },
   },
   {
@@ -56,6 +63,7 @@ const tripSchema = new mongoose.Schema(
 );
 
 tripSchema.index({ owner: 1, createdAt: -1 });
+tripSchema.index({ 'share.slug': 1 }, { unique: true, sparse: true });
 
 export const Trip = mongoose.models.Trip ?? mongoose.model('Trip', tripSchema);
 export default Trip;

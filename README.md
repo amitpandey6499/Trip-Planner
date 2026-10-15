@@ -18,6 +18,7 @@ server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 | Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap, @dnd-kit (drag & drop editor) |
 | Maps | Nominatim (place positions) + OSRM (road routes), cached in MongoDB — see [docs/MAP_SERVICES.md](docs/MAP_SERVICES.md) |
 | Photos & weather | Wikipedia lead images (free licences, cached 30 days) · Open-Meteo forecast + archive ("typical" weather), CC BY 4.0 |
+| Sharing & export | Public read-only links, QR codes (`qrcode`), PDF (PDFKit + Noto Sans, OFL), calendar files (.ics) |
 | Live updates | Server-Sent Events (generation progress, map progress) |
 | Backend | Node.js, Express 5, Helmet, express-rate-limit |
 | Database | MongoDB Atlas + Mongoose |
@@ -103,6 +104,7 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | `/destinations/:slug` | One destination: photo, best months, daily cost, 7-day weather, how to get there, stays, food |
 | `/hotels?destination=&budget=` | Where to stay: areas with typical prices per tier + Booking.com / Google Maps search links |
 | `/restaurants?destination=&veg=1` | Where to eat, pure-veg filter |
+| `/share/:slug` | A trip someone shared: read-only days, map, stays, costs; PDF, calendar, "Save a copy to my trips" (no login needed to view) |
 
 Inside a trip: **Edit plan** (drag & drop activities inside a day or onto another day, add / edit / remove them, rename days,
 undo / redo — the budget and the road routes follow every change) and tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks) and **Getting there** (flight / train / bus / car from your city).
@@ -142,6 +144,11 @@ undo / redo — the budget and the road routes follow every change) and tabs **W
 | GET / PUT / DELETE | `/api/favorites`, `/api/favorites/:slug` | ✔ | My favourite destinations |
 | GET | `/api/travel/weather?destination=&start=&end=` | – | Weather per day: forecast (16 days), then typical weather (Open-Meteo) |
 | GET | `/api/travel/reach?from=&to=&date=` | – | Flight / train / bus / car from a city, estimated times + Google Flights / IRCTC / redBus / Maps links |
+| GET / PUT | `/api/trips/:id/share` | ✔ | Share link info / turn it on or off `{ enabled, newLink? }` |
+| GET | `/api/share/:slug` | – | A shared trip (read-only, no private details) |
+| POST | `/api/share/:slug/copy` | ✔ | Save a copy of a shared trip to my trips |
+| GET | `/api/share/:slug/pdf` | – | PDF of a shared trip (with its QR code) |
+| POST | `/api/trips/pdf` | ✔ | PDF of the plan on screen `{ itinerary, tripId? }` (saved or not) |
 | GET | `/api/places/search?q=` | – | Old name for `/api/destinations` (kept for old links) |
 | POST | `/api/contact` | – | Contact form message (stored in MongoDB) |
 

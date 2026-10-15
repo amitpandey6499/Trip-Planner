@@ -41,6 +41,8 @@ const envSchema = z
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().min(1).max(65535).default(5000),
     CLIENT_URL: z.string().trim().default('http://localhost:5173'),
+    // Part 14: address of the app in share links inside PDFs (QR code). Default: the first CLIENT_URL.
+    PUBLIC_APP_URL: z.string().trim().default(''),
     TRUST_PROXY: z
       .enum(['true', 'false'])
       .default('false')
@@ -134,6 +136,7 @@ export const config = Object.freeze({
   clientUrls: env.CLIENT_URL.split(',')
     .map((url) => url.trim().replace(/\/$/, ''))
     .filter(Boolean),
+  publicAppUrl: (env.PUBLIC_APP_URL || env.CLIENT_URL.split(',')[0] || 'http://localhost:5173').trim().replace(/\/$/, ''),
   trustProxy: env.TRUST_PROXY,
   mongoUri: env.MONGODB_URI,
   auth: Object.freeze({

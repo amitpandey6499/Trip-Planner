@@ -14,6 +14,7 @@ export * from './utils/links.js';
 export * from './utils/weather.js';
 export * from './utils/packing.js';
 export * from './utils/time.js';
+export * from './utils/calendar.js';
 export * from './data/originCities.js';
 
 export * from './schemas/preferences.js';

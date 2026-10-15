@@ -93,3 +93,15 @@ export const ReachQuery = z.object({
   date: isoDay.optional().catch(undefined),
   travelers: z.coerce.number().int().min(1).max(LIMITS.MAX_TRAVELERS).optional().default(2).catch(2),
 });
+
+/** PUT /api/trips/:id/share → public link on / off (Part 14). newLink: a new address, the old one stops working. */
+export const ShareSettingsSchema = z.object({
+  enabled: z.boolean({ error: 'Say whether the link should be on or off.' }),
+  newLink: z.boolean().optional().default(false),
+});
+
+/** POST /api/trips/pdf → PDF of the plan on screen (saved or not). tripId: adds the share link + QR when the link is on. */
+export const TripPdfSchema = z.object({
+  itinerary: looseItinerary,
+  tripId: z.string().trim().max(64).optional(),
+});

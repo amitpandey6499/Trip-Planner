@@ -198,3 +198,20 @@ ActivityInput = { placeName, category, timeSlot?, estimatedDuration?, descriptio
   `[{ name, category, hours, feePerPerson, fullDay, description, tips, lat, lng }]` — editor ke "Ideas".
 - Client: `TripContext.editItinerary(edits)` (ek ya kai edits = ek Undo step) → `{ ok, changed } | { ok: false, error, field }`;
   `undoEdit`, `redoEdit`, `canUndo`, `canRedo`. History naya plan / trip khulne pe saaf.
+
+## Sharing & export (Part 14)
+```js
+// GET /api/trips/:id/share  ·  PUT /api/trips/:id/share { enabled: boolean, newLink?: boolean }   (owner)
+{ data: { enabled, slug: string | null, views, createdAt, url } }   // url = PUBLIC_APP_URL + '/share/' + slug
+// GET /api/share/:slug   (anyone; owner → isOwner + tripId + views; visitors are counted, the owner is not)
+{ data: { slug, title, destination, startDate, endDate, durationDays, travelersCount, totalBudget, budgetCategory,
+          destinationImage, itinerary, sharedBy /* first name */, updatedAt, isOwner } }
+// POST /api/share/:slug/copy   (login) → 201 { data: Trip }   — own copy: not shared, no notes / home city / packing ticks
+// GET /api/share/:slug/pdf  ·  POST /api/trips/pdf { itinerary, tripId? }  → application/pdf (attachment)
+```
+- Link off / unknown / badla hua → 404 "This shared trip is not available...". Slug: 8 random bytes, base64url (11 chars).
+- Public view **kabhi nahi** bhejta: e-mail, userId, `preferences` (notes, home city), `packingChecked`, expenses.
+- Share on / off trip ka `updatedAt` nahi badalta (Part 8 map update usse "newer version" pehchaanta hai).
+- PDF: `buildPdfContent(itinerary, { shareUrl })` (kya jaata hai, tested) + `renderTripPdf` (PDFKit). `exportLimiter`: 10 PDFs / min.
+- Calendar: `buildTripCalendar(itinerary, { uidBase, url, now })` → `{ ics, eventCount }` — client pe banta hai (unsaved plan bhi).
+  Times IST → UTC. UID = `<uidBase>-<activityId>@tripplanner`.

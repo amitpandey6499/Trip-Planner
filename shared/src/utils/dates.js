@@ -58,6 +58,17 @@ export const formatDate = (iso, locale = 'en-IN') => {
   return new Date(toUtcMs(iso)).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
 
+/** '2026-10-22' → 'Thu, 22 Oct 2026' (PDF, calendar). */
+export const formatDateLong = (iso, locale = 'en-IN') => {
+  if (!isValidIsoDate(iso)) return '';
+  const parts = Object.fromEntries(
+    new Intl.DateTimeFormat(locale, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+      .formatToParts(new Date(toUtcMs(iso)))
+      .map((p) => [p.type, p.value]),
+  );
+  return `${parts.weekday}, ${parts.day} ${parts.month} ${parts.year}`;
+};
+
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 export const monthName = (month) => MONTHS_SHORT[(Number(month) - 1 + 12) % 12];
 

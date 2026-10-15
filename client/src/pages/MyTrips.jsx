@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import {
+  Link2,
   Plus,
   Calendar,
   Users,
@@ -172,6 +173,15 @@ export const MyTrips = () => {
                       <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wide ${PHASE_STYLES[trip.phase]}`}>
                         {trip.phase}
                       </span>
+                      {trip.share?.enabled && (
+                        <span
+                          className="text-[10px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wide bg-emerald-50 text-emerald-700 border-emerald-200 flex items-center gap-1"
+                          title={`Anyone with the link can view it • opened ${trip.share.views ?? 0} times`}
+                          data-testid="shared-badge"
+                        >
+                          <Link2 className="w-3 h-3" /> Shared
+                        </span>
+                      )}
                       {trip.createdAt && (
                         <span className="text-xs text-slate-400">Created {new Date(trip.createdAt).toLocaleDateString('en-IN')}</span>
                       )}

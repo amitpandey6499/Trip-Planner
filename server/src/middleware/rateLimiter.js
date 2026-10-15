@@ -44,3 +44,13 @@ export const mapLimiter = rateLimit({
   skip: () => config.isTest,
   message: jsonMessage('Too many map updates. Please wait a minute and try again.'),
 });
+
+/** PDF export (Part 14): building a PDF takes a moment of server time. */
+export const exportLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 10,
+  standardHeaders: 'draft-7',
+  legacyHeaders: false,
+  skip: () => config.isTest,
+  message: jsonMessage('Too many PDF downloads. Please wait a minute and try again.'),
+});

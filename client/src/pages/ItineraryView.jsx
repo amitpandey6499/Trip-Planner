@@ -5,7 +5,6 @@ import {
   IndianRupee,
   BookmarkCheck,
   Share2,
-  Printer,
   RefreshCw,
   Clock,
   Sparkles,
@@ -27,12 +26,14 @@ import {
 } from 'lucide-react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { ITINERARY_SOURCES, LIMITS, addDays, bookingSearchUrl, formatDate, formatINR, mapsSearchUrl, todayIso } from '@tripplanner/shared';
+import { ITINERARY_SOURCES, LIMITS, addDays, formatDate, formatINR, mapsSearchUrl, todayIso } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
 import { useTripFromUrl } from '../hooks/useTripFromUrl';
 import { PageLoader, TripNotFound } from '../components/PageState';
 import { useSystemStatus } from '../hooks/useSystemStatus';
 import ItineraryBoard from '../components/editor/ItineraryBoard';
+import ShareDialog from '../components/share/ShareDialog';
+import { stayLinks } from '../utils/tripLinks';
 import InteractiveMap from '../components/InteractiveMap';
 import HotelCard from '../components/HotelCard';
 import RestaurantCard from '../components/RestaurantCard';
@@ -43,27 +44,6 @@ import ReachPanel from '../components/travel/ReachPanel';
 import { useWeather } from '../hooks/useWeather';
 import { destinationApi } from '../services/api';
 
-/** Booking / Maps links for a stay of the plan: areas ("Mid-range hotel near X") search the area, hotels their name. */
-const stayLinks = (hotel, itinerary) => {
-  const place = / near /.test(hotel.name) && hotel.address ? hotel.address : `${hotel.name}, ${itinerary.destination}`;
-  return {
-    booking: bookingSearchUrl({ place, checkIn: itinerary.startDate, checkOut: itinerary.endDate, adults: itinerary.travelersCount }),
-    maps: mapsSearchUrl(/ near /.test(hotel.name) ? `hotels near ${place}` : place),
-  };
-};
-
-/** Plain-text version of the itinerary for the clipboard (real share links come in Part 14). */
-const itineraryAsText = (it) =>
-  [
-    `${it.title}`,
-    `${it.durationDays} days • ${it.travelersCount} travelers • Est. ${formatINR(it.estimatedTotal)}`,
-    '',
-    ...it.days.flatMap((day) => [
-      `Day ${day.dayNumber}${day.date ? ` (${formatDate(day.date)})` : ''}: ${day.title}`,
-      ...day.activities.map((a) => `  - ${a.timeSlot ? `${a.timeSlot} ` : ''}${a.placeName}${a.cost ? ` (${formatINR(a.cost)})` : ''}`),
-      '',
-    ]),
-  ].join('\n');
 
 // Confetti only for a plan that was just generated (not when a saved trip is opened or the page is refreshed).
 let lastCelebratedGeneration = 0;
@@ -114,7 +94,7 @@ const ItineraryPage = () => {
   const [activeTab, setActiveTab] = useState('itinerary'); // 'itinerary' | 'map' | 'hotels' | 'restaurants' | 'cost' | 'weather' | 'reach'
   const [selectedDayNumber, setSelectedDayNumber] = useState(1);
   const [editing, setEditing] = useState(false); // Part 12: drag & drop editor on the Itinerary tab
-  const [copied, setCopied] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false); // Part 14: share link + downloads
   // "View on Map" from a stay / restaurant card: { kind: 'stay' | 'food', id, at }
   const [mapFocus, setMapFocus] = useState(null);
 
@@ -210,20 +190,6 @@ const ItineraryPage = () => {
   const aiLeft = lastMeta?.ai ? lastMeta.ai.left : null;
   // Hand edits wait while a plan / day is being made or a trip is loading.
   const editBlocked = loading || dayLoading ? 'Please wait for the current plan to finish.' : tripLoading ? 'Please wait...' : null;
-
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(itineraryAsText(currentItinerary));
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
-    } catch {
-      setCopied(false);
-    }
-  };
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   const handleSave = async () => {
     // On /itinerary the page then moves to /trips/:id by itself (see ItineraryView).
@@ -379,21 +345,12 @@ const ItineraryPage = () => {
               </Link>
 
               <button
-                onClick={handleCopy}
+                onClick={() => setShareOpen(true)}
                 className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
-                title="Copy the itinerary as text"
+                title="Share link, WhatsApp, QR code, PDF, calendar"
               >
                 <Share2 className="w-4 h-4 text-slate-500" />
-                <span>{copied ? 'Copied!' : 'Copy'}</span>
-              </button>
-
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
-                title="Print this page (full PDF export comes in Part 14)"
-              >
-                <Printer className="w-4 h-4 text-slate-500" />
-                <span className="hidden sm:inline">Print</span>
+                <span>Share</span>
               </button>
 
               <button
@@ -634,6 +591,17 @@ const ItineraryPage = () => {
         )}
 
       </div>
+
+      {shareOpen && (
+        <ShareDialog
+          itinerary={currentItinerary}
+          tripId={currentTripId}
+          isDirty={isDirty}
+          saving={saving}
+          onSave={handleSave}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 };

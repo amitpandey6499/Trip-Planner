@@ -28,8 +28,8 @@
 | 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ✅ Done |
 | 11 | Weather + packing list + "How to reach" | 6, 8 | ✅ Done |
 | 12 | Itinerary editor (drag & drop) | 5, 8 | ✅ Done |
-| 13 | AI Trip Chat | 6, 12 | ⬜ |
-| 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ⬜ |
+| 13 | AI Trip Chat | 6, 12 | ⏸ On hold (baad mein; neev Part 12 mein taiyaar) |
+| 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ✅ Done |
 | 15 | Expense tracker + bill split | 4, 5 | ⬜ |
 | 16 | UI polish (dark mode, Hindi/English, contact form) | 5 | ⬜ |
 | 17 | Admin dashboard | 4, 15 | ⬜ |
@@ -268,13 +268,31 @@ Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Pa
 
 **Depends on:** 5, 8 — **Affects:** 13, 14
 
-### Part 13 — AI Trip Chat
+### Part 13 — AI Trip Chat ⏸ (on hold)
 - "Day 2 relaxed kar do" → AI changes propose kare → preview (diff) → Apply.
 - Output Part 2 schema se validate; save Part 12 wale path se.
+- **Abhi hold pe** (tumhare kehne pe). Kisi aur part ko iski zarurat nahi. Milta-julta kaam pehle se: Part 9 "New plan for this day"
+  (pace + AI ke liye wish) aur Part 12 editor. Baad mein karna ho to `ItineraryEditSchema` / `applyEdit` / Undo taiyaar hain.
 
-### Part 14 — Sharing & export
-- Public link `/share/:slug` (on/off toggle), QR code, WhatsApp share.
-- Asli PDF (poora trip, saare din), Google Calendar `.ics` export.
+### Part 14 — Sharing & export ✅
+**Kya kiya**
+- Itinerary header mein **"Share"** (purane Copy / Print ki jagah) → ek dialog:
+  - **Share link** on/off (default off). Link `/share/<11 random characters>` — guess nahi ho sakta. Copy link, **WhatsApp**,
+    phone ka share sheet, **QR code** (download bhi), "Opened N times", **New link** (purana band). Off karke on → wahi link.
+  - Unsaved plan: "Save the trip first" + Save button. Unsaved changes ho to note: "link saved version dikhata hai".
+  - **Downloads:** asli **PDF** (server pe PDFKit), **Calendar (.ics)**, Copy as text, Print.
+- **Public page `/share/:slug`** (login nahi chahiye): read-only — din, map, stays & food, costs; PDF, Calendar, Copy link.
+  **"Save a copy to my trips"** (login ke baad wahi page) → apna alag trip. Owner ko "This is how others see your trip" + views.
+  Link band / badla → "This shared trip is not available".
+- **Private cheezein kabhi public nahi:** e-mail, home city, AI ke liye notes, packing ticks, (Part 15 ke) expenses. Sirf owner ka first name.
+- **PDF:** cover (facts, budget verdict, days at a glance, link on ho to QR), har din ek page (time, jagah, cost, tip, agle stop tak drive),
+  stays, food, cost estimate, notes, page numbers. Font Noto Sans (₹ sign ke liye; OFL licence, `server/assets/fonts`). Text searchable.
+- **Calendar (.ics, RFC 5545):** har din ek all-day event + har timed activity ek event (IST → UTC), location, GEO, tip, cost, link.
+  Google Calendar: Settings → Import & export → Import. Har event ka pakka UID (trip id se), isliye calendar apps use pehchaan sakte hain.
+- My Trips pe **"Shared"** badge. Share on/off se trip ka `updatedAt` nahi badalta.
+- Tests: shared 3 (calendar), server 5 (share, privacy, views, new link, copy, PDF), browser 7.
+
+**Depends on:** 5 — **Affects:** 16 (Hindi PDF ke liye font mein Devanagari pehle se), 18 (share link previews / OG tags deploy pe)
 
 ### Part 15 — Expense tracker + bill split
 - Kharche add karo (kisne diya, kis-kis mein bata), "kaun kisko kitna dega", estimate vs actual chart.

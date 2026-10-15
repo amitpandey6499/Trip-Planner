@@ -25,6 +25,7 @@ import Profile from './pages/Profile';
 import About from './pages/About';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
+import SharedTripPage from './pages/SharedTripPage';
 
 /** A crash on one page shows a friendly message; moving to another page clears it. */
 const ErrorBoundaryForRoute = ({ children }) => {
@@ -63,6 +64,7 @@ export const App = () => {
                   <Route path="/restaurants" element={<RestaurantsView />} />
                   <Route path="/about" element={<About />} />
                   <Route path="/contact" element={<Contact />} />
+                  <Route path="/share/:slug" element={<SharedTripPage />} />
 
                   {/* Trips (need login). Every saved trip has its own URL, so refresh / bookmarks work. */}
                   <Route path="/trips/new" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />

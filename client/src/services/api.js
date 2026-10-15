@@ -47,6 +47,23 @@ api.interceptors.response.use(
 
 const data = (promise) => promise.then((res) => res.data);
 
+/** Files (PDF): an error answer arrives as a Blob too — read its JSON so the message is shown. */
+const file = (promise) =>
+  promise
+    .then((res) => res.data)
+    .catch(async (err) => {
+      const body = err.response?.data;
+      if (body instanceof Blob) {
+        try {
+          const parsed = JSON.parse(await body.text());
+          if (parsed?.error) err.message = parsed.error;
+        } catch {
+          // not JSON: keep the general message
+        }
+      }
+      throw err;
+    });
+
 export const authApi = {
   me: () => data(api.get('/auth/me')),
   register: (body) => data(api.post('/auth/register', body)),
@@ -70,6 +87,8 @@ export const tripApi = {
   getTripById: (id) => data(api.get(`/trips/${id}`)),
   updateTrip: (id, changes) => data(api.put(`/trips/${id}`, changes)),
   deleteTrip: (id) => data(api.delete(`/trips/${id}`)),
+  // Part 14: PDF of the plan on screen (saved or not). tripId adds the share link + QR when the link is on.
+  pdf: ({ itinerary, tripId }) => file(api.post('/trips/pdf', { itinerary, ...(tripId && { tripId }) }, { responseType: 'blob' })),
 
   getHealth: () => data(api.get('/health')),
 };
@@ -86,6 +105,16 @@ export const favoritesApi = {
   list: () => data(api.get('/favorites')),
   add: (slug) => data(api.put(`/favorites/${encodeURIComponent(slug)}`)),
   remove: (slug) => data(api.delete(`/favorites/${encodeURIComponent(slug)}`)),
+};
+
+// Part 14 — public read-only links
+export const shareApi = {
+  info: (tripId) => data(api.get(`/trips/${tripId}/share`)),
+  // body: { enabled, newLink? }
+  set: (tripId, body) => data(api.put(`/trips/${tripId}/share`, body)),
+  get: (slug) => data(api.get(`/share/${encodeURIComponent(slug)}`)),
+  copy: (slug) => data(api.post(`/share/${encodeURIComponent(slug)}/copy`)),
+  pdf: (slug) => file(api.get(`/share/${encodeURIComponent(slug)}/pdf`, { responseType: 'blob' })),
 };
 
 // Part 11 — weather for the trip dates, how to get there

@@ -15,6 +15,7 @@ import mapRoutes from './routes/mapRoutes.js';
 import { destinationRoutes, favoriteRoutes, legacyPlacesRoutes, recommendationRoutes } from './routes/destinationRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
 import travelRoutes from './routes/travelRoutes.js';
+import shareRoutes from './routes/shareRoutes.js';
 
 const app = express();
 
@@ -53,6 +54,7 @@ app.use('/api/places', legacyPlacesRoutes);
 app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/contact', contactRoutes);
 app.use('/api/travel', travelRoutes);
+app.use('/api/share', shareRoutes);
 
 app.get('/', (_req, res) => {
   res.json({

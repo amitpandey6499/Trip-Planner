@@ -78,6 +78,14 @@ export const ACTIVITY_BUDGET_BUCKET = Object.freeze({
   Hotel: 'accommodation',
 });
 
+/** The four parts of a plan's estimate (itinerary.budgetBreakdown), in display order. Part 14 PDF, Part 15 estimate vs actual. */
+export const BUDGET_BUCKETS = Object.freeze([
+  { key: 'accommodation', label: 'Accommodation & Stays' },
+  { key: 'activitiesAndSightseeing', label: 'Activities & Attractions' },
+  { key: 'foodAndDining', label: 'Food & Dining' },
+  { key: 'localTransport', label: 'Local Transport & Cabs' },
+]);
+
 /** Explore page filter pills. */
 export const DESTINATION_CATEGORIES = Object.freeze(['All', 'Popular', 'Beaches', 'Mountains', 'Cultural', 'Adventure', 'Spiritual', 'Hidden Gems']);
 

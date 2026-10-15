@@ -4,6 +4,51 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Part 14 — Sharing & export: share link, QR, WhatsApp, PDF, calendar (tag `part-14`)
+
+**Part 13 (AI Trip Chat) abhi hold pe** (tumhare kehne pe) — kisi aur part ko uski zarurat nahi.
+
+### Chalane ke liye
+1. `npm install` (naye packages: server `pdfkit`, `qrcode`; client `qrcode`)
+2. `npm run dev` → koi trip kholo → header mein **Share**
+3. Deploy pe (Part 18) `server/.env` mein `PUBLIC_APP_URL=https://your-site` (PDF ke QR code ke liye). Abhi khaali = `CLIENT_URL`.
+
+**Naya env variable (optional):** `PUBLIC_APP_URL`.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| "Copy" (text) aur "Print" buttons | ek **Share** dialog: link, WhatsApp, QR, PDF, calendar, text, print |
+| Trip kisi ko dikhana = screenshot | **share link** `/share/:slug` (on/off, new link, views), bina login dekh sakte hain |
+| PDF = browser ka print (adha-adhoora) | **asli PDF**: cover + har din ek page + stays / food / costs, ₹ sahi, page numbers, QR |
+| Calendar nahi | **.ics** file: har din + har timed activity, Google / Outlook / Apple Calendar mein import |
+| Dost ka plan apna banana = dobara banao | **"Save a copy to my trips"** |
+
+### Naye files
+- `shared/src/utils/calendar.js` (buildTripCalendar, icsText, foldIcsLine), `shared/test/calendar.test.js`
+- `server/src/services/shareService.js`, `server/src/services/export/tripPdf.js`, `server/src/controllers/shareController.js`,
+  `server/src/routes/shareRoutes.js`, `server/assets/fonts/` (Noto Sans Regular + Bold, OFL.txt), `server/test/share.test.js`
+- `client/src/components/share/ShareDialog.jsx`, `client/src/pages/SharedTripPage.jsx`,
+  `client/src/utils/{download,tripText,tripLinks}.js`
+
+### Data contract
+- Trip: `share: { enabled, slug, createdAt, views }` (default off; unique sparse index on `share.slug`). Purane trips valid.
+- Naye endpoints aur shapes: `docs/CONTRACTS.md` → "Sharing & export".
+- Shared constants: `BUDGET_BUCKETS` (cost labels), `formatDateLong`. Request schemas: `ShareSettingsSchema`, `TripPdfSchema`.
+
+### Doosre parts pe asar
+- **Part 15:** expenses kabhi share page / PDF mein nahi jaayenge (private).
+- **Part 16:** Hindi PDF — Noto Sans mein Devanagari glyphs hain (shaping baad mein check).
+- **Part 18 (deploy):** `PUBLIC_APP_URL`; WhatsApp link preview (Open Graph tags) ke liye server ko `/share/:slug` HTML serve karna hoga.
+
+### Tests
+- Shared **55** (naye: calendar 3), server **89** (naye: share 5 — privacy, views, off / on / new link, copy, PDF).
+- Browser 7 checks (unsaved → save first; link on, QR, WhatsApp, copy; guest page + PDF; save a copy; owner views + badge;
+  off + new link; phone size). Downloaded PDF aur .ics files khol ke check kiye (pdftotext / pdftoppm).
+- **Sach:** WhatsApp / Google Calendar apps yahan nahi khul sakte — link ka format aur .ics file check ki; phone pe ek baar try kar lena.
+
+---
+
 ## Part 12 — Itinerary editor: drag & drop, add / edit / remove, undo (tag `part-12`)
 
 ### Chalane ke liye
