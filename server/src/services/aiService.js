@@ -6,6 +6,7 @@ import { createDayExtractor } from './ai/dayStream.js';
 import { AiResponseError, describeGeminiError, getGeminiClient } from './ai/geminiClient.js';
 import { OfflineUnsupportedError, destinationImageFor, planOffline, replanOfflineDay } from './ai/offlinePlanner.js';
 import { DAY_SCHEMA, SYSTEM_INSTRUCTION, buildDayPrompt, buildPrompt, itineraryJsonSchema } from './ai/prompt.js';
+import { imageForDestination } from './destinationService.js';
 
 /**
  * Itinerary generation — the order of attempts:
@@ -48,7 +49,7 @@ const previewDay = (raw, index, prefs) => {
   return parsed.success ? parsed.data : null;
 };
 
-const askGemini = async (client, prefs, { onProgress, onDay, onReset, signal }) => {
+const askGemini = async (client, prefs, { onProgress, onDay, onReset, signal, image }) => {
   const schema = itineraryJsonSchema(prefs.durationDays);
   const prompt = buildPrompt(prefs);
   const streaming = onDay !== noop && typeof client.generateJsonStream === 'function';
@@ -89,7 +90,7 @@ const askGemini = async (client, prefs, { onProgress, onDay, onReset, signal }) 
           model: client.model ?? config.gemini.model,
           generatedAt: new Date().toISOString(),
           destination: prefs.destination,
-          destinationImage: destinationImageFor(prefs.destination) ?? destinationImageFallback,
+          destinationImage: image ?? destinationImageFor(prefs.destination) ?? destinationImageFallback,
         },
         prefs,
         { expectDays: prefs.durationDays },
@@ -134,10 +135,16 @@ const offlinePlan = (prefs, { reason, status, onProgress, onDay }) => {
   return itinerary;
 };
 
-export const generateItinerary = async (
-  prefs,
-  { userId = null, fresh = false, onProgress = noop, onDay = noop, onReset = noop, signal } = {},
-) => {
+/** Part 10: the destination's real photo (Wikipedia) for the itinerary header, when we have one. */
+const withPhoto = async (result) => {
+  const image = await imageForDestination(result.itinerary.destination);
+  if (image) result.itinerary.destinationImage = image;
+  return result;
+};
+
+export const generateItinerary = async (prefs, options = {}) => withPhoto(await generate(prefs, options));
+
+const generate = async (prefs, { userId = null, fresh = false, onProgress = noop, onDay = noop, onReset = noop, signal } = {}) => {
   const client = getGeminiClient();
   const hooks = { onProgress, onDay, onReset, signal };
 

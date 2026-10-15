@@ -3,6 +3,8 @@ import { config, serviceStatus } from './config/env.js';
 import app from './app.js';
 import { connectDB, disconnectDB } from './config/db.js';
 import { ensureDemoData } from './services/demoService.js';
+import { ensureDestinations } from './services/destinationService.js';
+import { refreshDestinationPhotos } from './services/photoService.js';
 
 const start = async () => {
   try {
@@ -15,6 +17,16 @@ const start = async () => {
 
   if (config.auth.demoLoginEnabled) {
     await ensureDemoData();
+  }
+  await ensureDestinations();
+
+  // Part 10: look for missing destination photos in the background (cached; never slows down the start).
+  if (config.photos.enabled) {
+    setTimeout(() => {
+      refreshDestinationPhotos()
+        .then((s) => (s.updated || s.missing || s.failed) && console.log(`[Photos] ${s.updated} found, ${s.missing} without photo, ${s.failed ? 'Wikipedia not reachable' : 'ok'}.`))
+        .catch((err) => console.warn('[Photos] Could not refresh photos:', err.message));
+    }, 3000).unref();
   }
 
   const server = app.listen(config.port, () => {

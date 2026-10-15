@@ -38,6 +38,9 @@ export const AuthProvider = ({ children }) => {
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
+  /** Part 10: keep the user's favourite slugs in sync after a ❤️ toggle. */
+  const setFavorites = useCallback((favorites) => setUser((u) => (u ? { ...u, favorites } : u)), []);
+
   /** Each of these throws on failure; err.message / err.fields come from the server. */
   const login = useCallback(
     async ({ email, password, rememberMe = true }) => {
@@ -69,7 +72,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, isSignedIn: Boolean(user), loading, login, register, loginDemo, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, isSignedIn: Boolean(user), loading, login, register, loginDemo, logout, refreshUser, setFavorites }}>
       {children}
     </AuthContext.Provider>
   );

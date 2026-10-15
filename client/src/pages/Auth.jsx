@@ -95,7 +95,7 @@ export const Auth = () => {
               <p className="text-sm text-slate-500">
                 {isRegister ? 'Sign up to generate and save your itineraries' : 'Sign in to continue your travel journey'}
               </p>
-              {location.state?.from && <p className="text-xs text-blue-700 font-medium pt-1">Please sign in to continue.</p>}
+              {location.state?.from && <p className="text-xs text-blue-700 font-medium pt-1">{location.state.message ?? 'Please sign in to continue.'}</p>}
             </div>
 
             {serverError && (

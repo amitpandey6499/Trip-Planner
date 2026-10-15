@@ -137,7 +137,6 @@ export const ItinerarySchema = z.object({
   generatedAt: z.string().trim().max(40).optional().catch(undefined),
   // Filled by later parts. Optional, so trips saved before those parts stay valid.
   map: MapInfoSchema.optional().catch(undefined), // Part 8 (routes live on each day)
-  weather: z.array(z.unknown()).optional(), // Part 11
-  packingList: z.array(z.unknown()).optional(), // Part 11
-  transportOptions: z.array(z.unknown()).optional(), // Part 11
+  // Part 11: weather, packing list and "how to reach" are NOT stored here — they change with the dates
+  // and the starting city, so they are worked out fresh when the trip is opened.
 });

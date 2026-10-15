@@ -12,9 +12,9 @@ import healthRoutes from './routes/healthRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import tripRoutes from './routes/tripRoutes.js';
 import mapRoutes from './routes/mapRoutes.js';
-import placesRoutes from './routes/placesRoutes.js';
-import recommendationsRoutes from './routes/recommendationsRoutes.js';
+import { destinationRoutes, favoriteRoutes, legacyPlacesRoutes, recommendationRoutes } from './routes/destinationRoutes.js';
 import contactRoutes from './routes/contactRoutes.js';
+import travelRoutes from './routes/travelRoutes.js';
 
 const app = express();
 
@@ -47,9 +47,12 @@ app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/trips', tripRoutes);
 app.use('/api/map', mapRoutes);
-app.use('/api/places', placesRoutes);
-app.use('/api/recommendations', recommendationsRoutes);
+app.use('/api/destinations', destinationRoutes);
+app.use('/api/favorites', favoriteRoutes);
+app.use('/api/places', legacyPlacesRoutes);
+app.use('/api/recommendations', recommendationRoutes);
 app.use('/api/contact', contactRoutes);
+app.use('/api/travel', travelRoutes);
 
 app.get('/', (_req, res) => {
   res.json({

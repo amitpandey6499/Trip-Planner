@@ -38,9 +38,10 @@ import { TripPreferencesSchema, normalizeItinerary, formatINR, tripPhase } from 
 `normalizeItinerary(raw, preferences)` ye sab karta hai, dino ko 1..N number aur dates deta hai, ids lagata hai.
 Ise do baar chalao to result same rehta hai (save karte waqt server dobara chalata hai).
 
-## Future fields (optional, abhi khaali)
-`originCity`, `language` (preferences) · `routes` (Part 8) · `weather`, `packingList`, `transportOptions` (Part 11).
-Optional hain, isliye purane saved trips kabhi invalid nahi honge.
+## Optional fields
+`originCity` (preferences, Part 11: "Starting from") · `language` (preferences, Part 16 mein use hoga).
+Mausam, packing list aur "how to reach" **itinerary mein save nahi hote** (ye roz badalte hain) — har baar server se aate hain (Part 11, neeche).
+Trip pe sirf `packingChecked` (ticks) save hota hai. Purane saved trips valid rehte hain.
 
 ## Login (Part 4)
 - Session = JWT (HS256, `sub` = user id) in **httpOnly** cookie `tp_session`. Client kabhi token nahi dekhta / store karta.
@@ -114,3 +115,65 @@ Client: `client/src/services/stream.js` (`postStream`), Cancel = `AbortControlle
 → `{ data: itinerary, meta: { source: 'gemini' | 'offline', notice, ai, dayNumber } }`.
 Sirf woh din badalta hai (date, baaki din, stays, unke routes same); naya din `route` ke bina aata hai → map update.
 Itinerary ke din preferences ke din se alag hon → 400 ("Use Regenerate for the whole trip").
+
+## Destinations (Part 10)
+MongoDB `Destination` (seed: `server/src/data/destinationCatalog.js`, `DESTINATION_SEED_VERSION` badhao to purane DB update).
+```js
+// GET /api/destinations?q=&category=&sort=popular|name|budget|season&month=  → { count, data: DestinationSummary[] }
+DestinationSummary = {
+  slug, name, state, categories, interests, summary, highlights /* 3 */, bestMonths /* 1–12 */, inSeason, idealDays: [min, max],
+  dailyBudget: { Budget, Moderate, Luxury },   // ₹ per person per day (estimate)
+  center: { lat, lng }, image: string | null, offlinePlanner: boolean,
+  imageCredit: { source: 'Wikipedia', pageUrl, fileUrl } | { source: 'Unsplash', note } | null,
+}
+// GET /api/destinations/:slug  → { data: DestinationDetail }  (404 unknown)
+DestinationDetail = DestinationSummary + { highlights /* all */, terrain, reach: { airport?, railway?, road?, sea?, note? },
+  busName, notes, wikiUrl, stays: [{ area, lat, lng, prices: { Budget, Moderate, Luxury } }], eateries: [{ name, area, cuisine, veg, costForTwo }] }
+```
+- Naam se dhoondhna (`findDestinationDoc`): slug, naam, offline planner ke alias, Wikipedia title, bus town ("Leh", "Munnar", "Pondicherry").
+- `image` null → client placeholder dikhata hai (kabhi kisi aur jagah ki photo nahi).
+
+## Stays + food (Part 10)
+```js
+// GET /api/recommendations/hotels?destination=&budget=All|Budget|Moderate|Luxury&checkIn=&checkOut=&travelers=
+{ count, destination, sources: ['curated'] | ['google', 'curated'], data: Stay[] }
+Stay = { id, kind: 'area' | 'hotel', name, area?, address, budgetTier?, pricePerNight: number | null, priceNote?, amenities?,
+         rating? , ratingCount?, ratingSource?: 'Google',  // sirf Google Places se, kabhi banaya nahi
+         coordinates: { lat, lng } | null, links: { booking?, maps } }
+// GET /api/recommendations/restaurants?destination=&veg=true
+{ count, destination, note, data: [{ id, name, cuisine, area, address, veg, dietaryTags, costForTwo, priceNote, coordinates, links: { maps } }] }
+```
+Links `shared/src/utils/links.js` se: `bookingSearchUrl`, `mapsSearchUrl`, `mapsDirectionsUrl`, `googleFlightsUrl`, `redBusUrl`, `IRCTC_SEARCH_URL`.
+
+## Favourites (Part 10)
+`User.favorites: string[]` (slugs, newest first, max 100). Login zaroori.
+`GET /api/favorites` → `{ data: slugs, destinations: DestinationSummary[] }` · `PUT /api/favorites/:slug` · `DELETE /api/favorites/:slug` → `{ data: slugs }`
+(unknown slug → 404). `GET /api/auth/me` ke user mein bhi `favorites`.
+
+## Weather (Part 11)
+```js
+// GET /api/travel/weather?destination=&start=YYYY-MM-DD&end=YYYY-MM-DD[&lat=&lng=]   (max LIMITS.MAX_TRIP_DAYS din)
+{ data: {
+  location: { name, lat, lng, source: 'catalog' | 'geocoded' | 'given' },
+  days: [{ date, kind: 'forecast' | 'typical' | 'actual' | 'missing', code, summary, icon, tMax, tMin, rainMm, rainChance,
+           rainyYears?, years? }],         // typical: pichhle 3 saal ka average; rainChance = kitne % saal baarish
+  attribution: { text: 'Weather data by Open-Meteo.com', url, license: 'CC BY 4.0' }, notes: string[] } }
+```
+Errors: 404 jagah nahi mili · 503 Open-Meteo nahi mila / `WEATHER_ENABLED=false`. Weather codes → `weatherInfo(code)` (`shared/src/utils/weather.js`).
+
+## Packing list (Part 11)
+`buildPackingList({ itinerary, preferences, weather, destination })` (`shared/src/utils/packing.js`, server pe nahi chalta)
+→ `{ groups: [{ id, title, items: [{ id, label, reason }] }], basedOn: string[] }`. Item `id` = `slugify(label)` (e.g. `thermal-innerwear`), isliye stable hai;
+ticks trip pe: `PUT /api/trips/:id { packingChecked: string[] }` (max 200). Unsaved plan ke ticks sirf draft mein.
+
+## How to reach (Part 11)
+```js
+// GET /api/travel/reach?from=Ghaziabad&to=manali[&date=YYYY-MM-DD]
+{ data: { from: { name, state, airport, station, known }, to: { slug, name, state }, straightKm,
+  road: { km, durationMin, source: 'osrm' | 'estimate' } | null,
+  options: [{ mode: 'flight' | 'train' | 'bus' | 'car' | 'ship' | 'local', title, durationMin | null, steps, links: [{ label, url }],
+              note?, recommended? }],    // exactly one recommended
+  notes } }
+```
+- `from`: `ORIGIN_CITIES` (`shared/src/data/originCities.js`, 27 shehar + aliases) ya geocoder (tab sirf bus / car). Na mile → 404.
+- Times andaze hain (UI pe "≈"), koi fare nahi. Starting city trip pe: `PUT /api/trips/:id { originCity }` → `preferences.originCity`.

@@ -48,7 +48,7 @@ export const SaveTripSchema = z.object({
   itinerary: z.unknown().optional(),
 });
 
-/** Body of PUT /api/trips/:id — only these fields can ever change. */
+/** Body of PUT /api/trips/:id — only these fields can ever change (originCity is stored in the trip's preferences). */
 export const UpdateTripSchema = z
   .object({
     title: tripFields.title,
@@ -57,6 +57,9 @@ export const UpdateTripSchema = z
     travelersCount: tripFields.travelersCount,
     totalBudget: tripFields.totalBudget,
     budgetCategory: z.enum(BUDGET_TIER_VALUES),
+    // Part 11: starting city (for "How to reach") and the ticked packing-list items
+    originCity: z.string().trim().max(LIMITS.MAX_DESTINATION_LENGTH, 'Starting city is too long.'),
+    packingChecked: z.array(z.string().trim().min(1).max(80)).max(200, 'Too many packing items.'),
   })
   .partial()
   .superRefine(checkTripDates)

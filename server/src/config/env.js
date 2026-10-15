@@ -83,6 +83,19 @@ const envSchema = z
     GEO_CACHE_DAYS: z.coerce.number().int().min(1).max(365).default(60),
     MAP_RATE_LIMIT_PER_MIN: z.coerce.number().int().positive().default(20),
 
+    // Destination photos from Wikipedia (Part 10) and weather from Open-Meteo (Part 11) — free, no key.
+    PHOTOS_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    WIKIPEDIA_API_URL: httpUrl.default('https://en.wikipedia.org/w/api.php'),
+    WEATHER_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((v) => v === 'true'),
+    OPEN_METEO_URL: httpUrl.default('https://api.open-meteo.com'),
+    OPEN_METEO_ARCHIVE_URL: httpUrl.default('https://archive-api.open-meteo.com'),
+
     // Rate limiting
     RATE_LIMIT_WINDOW_MIN: z.coerce.number().positive().default(15),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(300),
@@ -149,6 +162,15 @@ export const config = Object.freeze({
     timeoutMs: env.GEO_TIMEOUT_SECONDS * 1000,
     cacheDays: env.GEO_CACHE_DAYS,
   }),
+  photos: Object.freeze({
+    enabled: env.PHOTOS_ENABLED,
+    wikipediaApiUrl: env.WIKIPEDIA_API_URL,
+  }),
+  weather: Object.freeze({
+    enabled: env.WEATHER_ENABLED,
+    forecastUrl: env.OPEN_METEO_URL,
+    archiveUrl: env.OPEN_METEO_ARCHIVE_URL,
+  }),
   rateLimit: Object.freeze({
     windowMs: env.RATE_LIMIT_WINDOW_MIN * 60 * 1000,
     max: env.RATE_LIMIT_MAX,
@@ -164,6 +186,8 @@ export const serviceStatus = () => ({
   aiDailyLimit: config.gemini.dailyLimit,
   googlePlaces: Boolean(config.googlePlacesKey),
   demoLogin: config.auth.demoLoginEnabled,
+  photos: config.photos.enabled,
+  weather: config.weather.enabled,
   map: {
     enabled: config.map.enabled,
     geocoder: config.map.enabled ? new URL(config.map.nominatimUrl).host : null,

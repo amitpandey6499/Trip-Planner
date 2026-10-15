@@ -59,7 +59,7 @@ before(async () => {
 });
 after(async () => {
   setGeoFetch(null);
-  setGeoInterval(1100);
+  setGeoInterval(null);
   await stopTestDb();
 });
 beforeEach(async () => {

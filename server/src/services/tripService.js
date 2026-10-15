@@ -92,7 +92,9 @@ export const updateTrip = async (tripId, ownerId, changes) => {
     );
   }
 
-  trip.set({ ...changes, durationDays });
+  const { originCity, ...facts } = changes;
+  trip.set({ ...facts, durationDays });
+  if (originCity !== undefined) trip.set('preferences.originCity', originCity || undefined);
   // Same length, new dates / travelers / budget: keep the itinerary's facts in sync.
   if (trip.itinerary) {
     trip.itinerary = normalizeItinerary(trip.itinerary, {

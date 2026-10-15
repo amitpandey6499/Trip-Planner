@@ -6,6 +6,7 @@ import {
   DIETARY_OPTIONS,
   INTERESTS,
   LIMITS,
+  ORIGIN_CITIES,
   POPULAR_DESTINATIONS,
   PREFERENCE_FIELD_STEP,
   STAY_TYPES,
@@ -62,6 +63,7 @@ const initialForm = (prefs) => {
     accommodationType: prefs.accommodationType ?? 'Mid-Range Hotel',
     dietaryPreference: prefs.dietaryPreference ?? 'No Restrictions',
     specialNotes: prefs.specialNotes ?? '',
+    originCity: prefs.originCity ?? '',
     language: prefs.language ?? 'en',
   };
 };
@@ -506,6 +508,29 @@ const TripWizard = ({ editTripId }) => {
               </div>
 
               <div>
+                <label htmlFor="originCity" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
+                  Starting from (optional)
+                </label>
+                <input
+                  id="originCity"
+                  list="origin-cities"
+                  value={formData.originCity}
+                  onChange={(e) => update('originCity', e.target.value)}
+                  maxLength={LIMITS.MAX_DESTINATION_LENGTH}
+                  placeholder="Your city, e.g. Delhi — used for “Getting there”"
+                  className={`${inputClass(errors.originCity)} px-3.5 py-3`}
+                />
+                <datalist id="origin-cities">
+                  {ORIGIN_CITIES.map((c) => (
+                    <option key={c.name} value={c.name}>
+                      {c.state}
+                    </option>
+                  ))}
+                </datalist>
+                <FieldError message={errors.originCity} />
+              </div>
+
+              <div>
                 <label htmlFor="specialNotes" className="block text-xs font-bold uppercase tracking-wider text-slate-700 mb-1">
                   Special Preferences (optional)
                 </label>
@@ -543,6 +568,7 @@ const TripWizard = ({ editTripId }) => {
                     ['Travel Pace', formData.travelStyle],
                     ['Stay', formData.accommodationType],
                     ['Food', formData.dietaryPreference],
+                    ...(formData.originCity.trim() ? [['Starting from', formData.originCity.trim()]] : []),
                   ].map(([label, value]) => (
                     <div key={label}>
                       <dt className="text-slate-400 font-semibold uppercase text-[10px]">{label}</dt>

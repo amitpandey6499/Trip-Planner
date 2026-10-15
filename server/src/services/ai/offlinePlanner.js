@@ -33,8 +33,8 @@ const PLACES_PER_DAY = { Relaxed: 2, Balanced: 3, Packed: 4 };
 const MEAL_FACTOR = { Budget: 0.8, Moderate: 1, Luxury: 1.6 };
 const BEST_ORDER = { morning: 0, any: 1, afternoon: 2, evening: 3 };
 const VEG_DIETS = ['Vegetarian', 'Vegan', 'Jain'];
-const STAY_LABEL = { Budget: 'Budget guesthouse', Moderate: 'Mid-range hotel', Luxury: 'Luxury hotel / resort' };
-const STAY_AMENITIES = {
+export const STAY_LABEL = { Budget: 'Budget guesthouse', Moderate: 'Mid-range hotel', Luxury: 'Luxury hotel / resort' };
+export const STAY_AMENITIES = {
   Budget: ['Free WiFi', 'Hot water', 'Central location'],
   Moderate: ['Free WiFi', 'Breakfast included', 'Room service', 'Central location'],
   Luxury: ['Breakfast included', 'Pool / spa', 'Room service', 'Airport transfer'],

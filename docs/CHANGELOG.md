@@ -4,6 +4,70 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Parts 10 + 11 — Destinations, photos, stays, favourites + Weather, packing list, how to reach (tags `part-10`, `part-11`, ek hi commit)
+
+Ek commit kyunki Part 11 ka mausam, packing list aur "how to reach" Part 10 ke destination data (center, terrain, airport / station) pe tike hain.
+
+### Chalane ke liye
+1. `npm install` (koi naya package nahi)
+2. `npm run dev` → server start pe **26 destinations MongoDB mein** apne-aap aa jaate hain, aur background mein Wikipedia se photos
+   (terminal: `[Photos] ...`). Haath se: `npm run photos -w server`.
+3. Explore → koi destination → **destination page** (photo, best months, 7 din ka mausam, "How to get there").
+   Trip → **Weather & Packing** aur **Getting there** tabs.
+4. Koi key nahi chahiye. Free services ki **policies** (`docs/MAP_SERVICES.md`): Open-Meteo free API sirf **non-commercial**
+   (https://open-meteo.com/en/terms), Wikimedia har request pe User-Agent maangta hai — `GEO_USER_AGENT` mein apni site / e-mail daal do.
+
+**Naye env variables (sab optional):** `PHOTOS_ENABLED` (true), `WIKIPEDIA_API_URL`, `WEATHER_ENABLED` (true), `OPEN_METEO_URL`,
+`OPEN_METEO_ARCHIVE_URL`. `GEO_USER_AGENT` ab sab outside services pe jaata hai. `MAP_RATE_LIMIT_PER_MIN` weather / reach pe bhi.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| Destinations ek JSON file mein, "Popular" / "Hidden Gems" khaali | **26 destinations MongoDB mein**, har category bhari, search + sort ("good time to go now") |
+| Stock photos (kai jagah galat jagah ki photo) | **Wikipedia** ki free-licence lead image + credit link, DB cache; na mile to placeholder |
+| Hotels: "Grand Manali Palace Hotel" jaise **banaye hue naam**, nakli ⭐ ratings + reviews | stay **areas** + har tier ka typical price + **Booking.com search link** (dates ke saath). Rating sirf Google Places se |
+| Hotels tier filter kuch filter nahi karta tha | Budget / Moderate / Luxury sach mein filter (URL `?budget=`) |
+| Restaurants pe "Veg Friendly", "Free WiFi" jaise default tags | curated places, **Pure veg only** filter, list nahi to saaf message |
+| ❤️ sirf dikhawe ka | **favourites account mein** (`/api/favorites`), "My favourites (N)" |
+| Home pe hardcoded cards + ⭐ 4.8 | "Good time to go now" — is mahine ke best destinations (DB se) |
+| Mausam kahin nahi | trip dates ka **forecast** (16 din), aage ki dates ka **typical** mausam (pichhle 3 saal), har din pe chip |
+| Packing list nahi | mausam + activities + terrain + food + log ke hisaab se list, har item ka reason, ticks trip ke saath save |
+| "Kaise pahunchein" nahi | starting city → flight / train / bus / car (time andaza) + Google Flights / IRCTC / redBus / Maps links, "Best fit" |
+| HotelsView / RestaurantsView: 2 lint warnings | pages naye, **lint 0 warnings** |
+
+### Naye files
+- `server/src/data/destinationCatalog.js`, `server/src/models/Destination.js`, `server/scripts/photos.js`, `server/src/middleware/validateQuery.js`
+- `server/src/services/{destinationService,photoService,recommendationService,favoriteService,weatherService,reachService}.js`
+- `server/src/controllers/{destinationController,travelController}.js`, `server/src/routes/{destinationRoutes,travelRoutes}.js`
+- `shared/src/utils/{links,weather,packing}.js`, `shared/src/data/originCities.js`
+- `client/src/pages/DestinationPage.jsx`, `client/src/components/{DestinationImage,DestinationPicker,FavoriteButton}.jsx`,
+  `client/src/components/travel/{WeatherIcon,WeatherPanel,PackingList,ReachPanel}.jsx`, `client/src/hooks/{useFavorites,useWeather,useDestinationList}.js`
+- `server/test/{destinations,travel}.test.js`, `shared/test/travel.test.js`
+
+**Hataye:** `server/src/data/destinations.json`, `services/placesService.js`, `controllers/placesController.js`, `routes/{placesRoutes,recommendationsRoutes}.js`.
+Purane URLs `/api/places/search` aur `/api/places/:slug` ab bhi chalte hain (naye code pe).
+
+### Data contract
+- Trip: `packingChecked: string[]` (naya), `preferences.originCity` (wizard step 3 + "Getting there" se). `PUT /api/trips/:id` dono le sakta hai.
+- Itinerary schema se khaali placeholders `weather`, `packingList`, `transportOptions` hata diye — ye roz badalte hain, isliye save nahi hote,
+  server se aate hain. Purane trips valid. `User.favorites: string[]`.
+- Poora shape: `docs/CONTRACTS.md` (Destinations, Stays + food, Favourites, Weather, Packing list, How to reach).
+
+### Doosre parts pe asar
+- **Part 12 (editor):** activity badli → packing list apne-aap (client pe banti hai); places ke liye `DestinationPicker` reuse.
+- **Part 13 (chat):** AI ko mausam + reach data context mein de sakte hain.
+- **Part 14 (share/export):** packing list "Print list" pehle se; PDF mein mausam + packing.
+- **Part 16 (UI / Hindi):** naye pages ke text translate karne honge.
+- **Part 18 (deploy):** `GEO_USER_AGENT` mein site URL + e-mail; Open-Meteo commercial use pe paid plan.
+
+### Tests
+- Server **82** tests (naye: destinations 9, travel 7; purane places wale 2 hata), shared **43** (naye: weather codes, cities, packing, month ranges).
+- Browser: Parts 10/11 ke 8 checks (fake Wikipedia / Open-Meteo / OSRM) + AI trip pe weather / packing / reach, purane sab checks (Parts 2–9) dobara pass.
+- **Sach:** asli Wikipedia / Open-Meteo / Nominatim / OSRM / Gemini se yahan (sandbox) connect nahi ho sakta — tests fake services se hue
+  jinki API same hai. Laptop pe ek baar destination page aur "Weather & Packing" tab khol ke dekh lena (photos server start ke ~1 min baad).
+
+---
+
 ## Parts 8 + 9 — Real map + Streaming / regenerate one day (tags `part-8`, `part-9`, ek hi commit)
 
 **Part 7 (deploy) skip kiya** (tumhare kehne pe) — Part 18 mein final deploy ke saath hoga. Part 8 aur 9 ko uski zarurat nahi.

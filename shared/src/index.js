@@ -10,6 +10,10 @@ export * from './utils/budget.js';
 export * from './utils/interests.js';
 export * from './utils/destinations.js';
 export * from './utils/map.js';
+export * from './utils/links.js';
+export * from './utils/weather.js';
+export * from './utils/packing.js';
+export * from './data/originCities.js';
 
 export * from './schemas/preferences.js';
 export * from './schemas/itinerary.js';

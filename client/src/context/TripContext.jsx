@@ -104,6 +104,9 @@ export const TripProvider = ({ children }) => {
   // Map updates do not change it, so a slow map answer for an old plan is never applied to a new one.
   const [planRevision, setPlanRevision] = useState(0);
   const bumpPlan = useCallback(() => setPlanRevision((n) => n + 1), []);
+  // Part 11: ticked packing-list items (saved with a saved trip)
+  const [packingChecked, setPackingChecked] = useState([]);
+  const packingTimer = useRef(null);
   const [savedTrips, setSavedTrips] = useState([]);
   const [loading, setLoading] = useState(false); // generating an itinerary
   const [tripLoading, setTripLoading] = useState(false); // opening one saved trip
@@ -181,6 +184,7 @@ export const TripProvider = ({ children }) => {
         setPlanPreferences(res.preferences ?? preferences);
         setCurrentItinerary(res.data);
         setCurrentTripId(tripId);
+        if (!tripId) setPackingChecked([]); // a brand-new plan starts with an empty checklist
         setIsDirty(true);
         setLastMeta(res.meta ?? null);
         setGenerationId((n) => n + 1);
@@ -260,6 +264,9 @@ export const TripProvider = ({ children }) => {
         destinationImage: currentItinerary.destinationImage,
       };
       const res = await tripApi.saveTrip({ tripData, preferences: stylePreferences(p), itinerary: currentItinerary });
+      if (!currentTripId && packingChecked.length) {
+        tripApi.updateTrip(res.data.id, { packingChecked }).catch((err) => console.warn('Packing ticks not saved:', err.message));
+      }
       setCurrentTripId(res.data.id);
       setCurrentItinerary(res.data.itinerary ?? currentItinerary);
       setIsDirty(false);
@@ -273,7 +280,7 @@ export const TripProvider = ({ children }) => {
     } finally {
       setSaving(false);
     }
-  }, [currentItinerary, planPreferences, currentPreferences, currentTripId, fetchTrips, showToast, bumpPlan]);
+  }, [currentItinerary, planPreferences, currentPreferences, currentTripId, packingChecked, fetchTrips, showToast, bumpPlan]);
 
   const deleteTrip = useCallback(
     async (id) => {
@@ -318,6 +325,7 @@ export const TripProvider = ({ children }) => {
       setPlanPreferences({ ...makeDefaultPreferences(), ...(trip.preferences ?? {}), ...facts });
       setCurrentItinerary(upgradeItinerary(trip.itinerary, facts));
       setCurrentTripId(trip.id);
+      setPackingChecked(trip.packingChecked ?? []);
       setIsDirty(false);
       setLastMeta(null);
       bumpPlan();
@@ -345,6 +353,7 @@ export const TripProvider = ({ children }) => {
       setCurrentTripId(null);
       setIsDirty(false);
       setLastMeta(null);
+      setPackingChecked([]);
       setCurrentPreferences(makeDefaultPreferences());
       setError(null);
     }
@@ -358,6 +367,7 @@ export const TripProvider = ({ children }) => {
         setCurrentTripId(draft.tripId ?? null);
         setIsDirty(Boolean(draft.dirty));
         setLastMeta(draft.meta ?? null);
+        setPackingChecked(draft.packingChecked ?? []);
       }
       fetchTrips();
     }
@@ -440,10 +450,39 @@ export const TripProvider = ({ children }) => {
             tripId: currentTripId,
             dirty: isDirty,
             meta: lastMeta,
+            packingChecked,
           }
         : null,
     );
-  }, [user?.id, draftReady, currentItinerary, planPreferences, currentPreferences, currentTripId, isDirty, lastMeta]);
+  }, [user?.id, draftReady, currentItinerary, planPreferences, currentPreferences, currentTripId, isDirty, lastMeta, packingChecked]);
+
+  // ── Part 11: packing ticks and starting city ─────────────────────────────
+  /** Tick / untick a packing item; a saved trip stores it (a moment later, so quick clicks make one request). */
+  const latestPacking = useRef(packingChecked);
+  latestPacking.current = packingChecked;
+  const togglePacked = useCallback(
+    (itemId) => {
+      const prev = latestPacking.current;
+      const next = prev.includes(itemId) ? prev.filter((id) => id !== itemId) : [...prev, itemId];
+      latestPacking.current = next;
+      setPackingChecked(next);
+      if (!currentTripId) return;
+      clearTimeout(packingTimer.current);
+      packingTimer.current = setTimeout(() => {
+        tripApi.updateTrip(currentTripId, { packingChecked: next }).catch((err) => console.warn('Packing ticks not saved:', err.message));
+      }, 700);
+    },
+    [currentTripId],
+  );
+
+  /** "How to reach" remembers the starting city with the trip. */
+  const setOriginCity = useCallback(
+    (city) => {
+      setPlanPreferences((p) => (p ? { ...p, originCity: city } : p));
+      if (currentTripId) tripApi.updateTrip(currentTripId, { originCity: city }).catch((err) => console.warn('Starting city not saved:', err.message));
+    },
+    [currentTripId],
+  );
 
   return (
     <TripContext.Provider
@@ -463,6 +502,9 @@ export const TripProvider = ({ children }) => {
         dayLoading,
         mapStatus,
         updateMap,
+        packingChecked,
+        togglePacked,
+        setOriginCity,
         draftReady,
         savedTrips,
         loading,

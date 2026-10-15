@@ -41,6 +41,8 @@ const tripSchema = new mongoose.Schema(
     destinationImage: { type: String, trim: true },
     preferences: { type: preferencesSchema, default: () => ({}) },
     itinerary: { type: mongoose.Schema.Types.Mixed, default: null },
+    // Part 11: ids of the packing-list items the user ticked
+    packingChecked: { type: [String], default: [] },
     schemaVersion: { type: Number, default: 1 },
   },
   {

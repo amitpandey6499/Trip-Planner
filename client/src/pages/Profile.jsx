@@ -1,6 +1,6 @@
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Mail, GraduationCap, LogOut, CheckCircle2, AlertTriangle, XCircle, Loader2, CalendarDays, Map } from 'lucide-react';
+import { Mail, GraduationCap, LogOut, CheckCircle2, AlertTriangle, XCircle, Loader2, CalendarDays, Map, Heart } from 'lucide-react';
 import { projectInfo, collegeLabel } from '@tripplanner/shared';
 import { useAuth } from '../context/AuthContext';
 import { useSystemStatus } from '../hooks/useSystemStatus';
@@ -61,6 +61,12 @@ const buildStatusCards = (status, error, aiUsage) => {
       detail: services.googlePlaces ? 'Live hotel search enabled.' : 'Using the curated hotel and restaurant list.',
     },
     {
+      title: 'Photos & weather',
+      state: services.photos && services.weather ? 'ok' : 'warn',
+      label: services.photos && services.weather ? 'Active' : 'Partly off',
+      detail: `Destination photos: ${services.photos ? 'Wikipedia' : 'off'} • Weather: ${services.weather ? 'Open-Meteo (forecast + typical)' : 'off'}.`,
+    },
+    {
       title: 'Maps & routes',
       state: services.map?.enabled ? 'ok' : 'warn',
       label: services.map?.enabled ? 'Active' : 'Estimates only',
@@ -114,6 +120,10 @@ export const Profile = () => {
                 <Map className="w-3.5 h-3.5 text-slate-400" />
                 {user?.tripCount ?? 0} saved {user?.tripCount === 1 ? 'trip' : 'trips'}
               </span>
+              <Link to="/explore?favorites=1" className="flex items-center gap-1 hover:text-red-600">
+                <Heart className="w-3.5 h-3.5 text-red-400" />
+                {user?.favorites?.length ?? 0} favourite {user?.favorites?.length === 1 ? 'destination' : 'destinations'}
+              </Link>
             </p>
           </div>
 

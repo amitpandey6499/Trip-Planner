@@ -57,3 +57,22 @@ export const formatDate = (iso, locale = 'en-IN') => {
   if (!isValidIsoDate(iso)) return '';
   return new Date(toUtcMs(iso)).toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 };
+
+const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const monthName = (month) => MONTHS_SHORT[(Number(month) - 1 + 12) % 12];
+
+/** [10, 11, 12, 1, 2, 3] → "Oct–Mar"; [3, 4, 5, 10, 11] → "Mar–May, Oct–Nov"; all 12 → "All year". */
+export const formatMonthRanges = (months) => {
+  const set = new Set((months ?? []).map(Number).filter((m) => m >= 1 && m <= 12));
+  if (set.size === 0) return '';
+  if (set.size === 12) return 'All year';
+  // start each run at a month whose previous month is not included (handles Dec → Jan wrap)
+  const starts = [...set].filter((m) => !set.has(m === 1 ? 12 : m - 1)).sort((a, b) => a - b);
+  return starts
+    .map((start) => {
+      let end = start;
+      while (set.has(end === 12 ? 1 : end + 1) && (end === 12 ? 1 : end + 1) !== start) end = end === 12 ? 1 : end + 1;
+      return start === end ? monthName(start) : `${monthName(start)}–${monthName(end)}`;
+    })
+    .join(', ');
+};

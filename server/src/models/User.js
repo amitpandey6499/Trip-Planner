@@ -11,6 +11,8 @@ const userSchema = new mongoose.Schema(
     avatarUrl: { type: String, trim: true },
     isDemo: { type: Boolean, default: false },
     lastLoginAt: { type: Date },
+    // Part 10: destination slugs the user saved with ❤️ (newest first)
+    favorites: { type: [String], default: [] },
   },
   {
     timestamps: true,
@@ -28,6 +30,7 @@ userSchema.statics.toPublic = (user) =>
     role: user.role ?? 'user',
     avatarUrl: user.avatarUrl ?? null,
     isDemo: Boolean(user.isDemo),
+    favorites: Array.isArray(user.favorites) ? user.favorites : [],
     createdAt: user.createdAt,
   };
 

@@ -9,6 +9,7 @@
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "seed": "node scripts/seed.js",
+    "photos": "node scripts/photos.js",
     "test": "node --import ./scripts/setup-tests.js --test --test-concurrency=1"
   },
   "dependencies": {

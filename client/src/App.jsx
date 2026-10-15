@@ -15,6 +15,7 @@ import Home from './pages/Home';
 import Auth from './pages/Auth';
 import CreateTrip from './pages/CreateTrip';
 import Explore from './pages/Explore';
+import DestinationPage from './pages/DestinationPage';
 import ItineraryView from './pages/ItineraryView';
 import MapView from './pages/MapView';
 import HotelsView from './pages/HotelsView';
@@ -56,6 +57,7 @@ export const App = () => {
                   <Route path="/" element={<Home />} />
                   <Route path="/auth" element={<Auth />} />
                   <Route path="/explore" element={<Explore />} />
+                  <Route path="/destinations/:slug" element={<DestinationPage />} />
                   <Route path="/map" element={<MapView />} />
                   <Route path="/hotels" element={<HotelsView />} />
                   <Route path="/restaurants" element={<RestaurantsView />} />

@@ -71,12 +71,27 @@ export const tripApi = {
   updateTrip: (id, changes) => data(api.put(`/trips/${id}`, changes)),
   deleteTrip: (id) => data(api.delete(`/trips/${id}`)),
 
-  searchDestinations: (q = '', category = 'all') => data(api.get('/places/search', { params: { q, category } })),
-  getDestination: (slug) => data(api.get(`/places/${slug}`)),
-  getHotels: (destination, budget = 'Moderate') => data(api.get('/recommendations/hotels', { params: { destination, budget } })),
-  getRestaurants: (destination) => data(api.get('/recommendations/restaurants', { params: { destination } })),
-
   getHealth: () => data(api.get('/health')),
+};
+
+// Part 10 — destinations, stays / food, favourites
+export const destinationApi = {
+  list: (params = {}) => data(api.get('/destinations', { params })),
+  get: (slug) => data(api.get(`/destinations/${encodeURIComponent(slug)}`)),
+  stays: (params) => data(api.get('/recommendations/hotels', { params })),
+  restaurants: (params) => data(api.get('/recommendations/restaurants', { params })),
+};
+
+export const favoritesApi = {
+  list: () => data(api.get('/favorites')),
+  add: (slug) => data(api.put(`/favorites/${encodeURIComponent(slug)}`)),
+  remove: (slug) => data(api.delete(`/favorites/${encodeURIComponent(slug)}`)),
+};
+
+// Part 11 — weather for the trip dates, how to get there
+export const travelApi = {
+  weather: (params) => data(api.get('/travel/weather', { params })),
+  reach: (params) => data(api.get('/travel/reach', { params })),
 };
 
 export const contactApi = {

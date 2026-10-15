@@ -3,12 +3,13 @@ import { config } from '../../config/env.js';
 import { GeoCache } from '../../models/index.js';
 
 /**
- * HTTP + caching shared by the geocoder (Nominatim) and the router (OSRM).
+ * HTTP + caching for every free outside service:
+ *   nominatim (places, Part 8), osrm (road routes, Part 8), wikipedia (photos, Part 10), openmeteo (weather, Part 11).
  *
- * Usage-policy rules built in here (OpenStreetMap community services):
- *   - at most ONE request per second per service, for the whole server (a queue, not per user)
+ * Usage-policy rules built in here:
+ *   - one queue per service with a minimum gap between requests (OpenStreetMap services: max 1 per second)
  *   - a User-Agent that names this app (library default agents are blocked)
- *   - every answer is cached in MongoDB (GeoCache) so nothing is asked twice
+ *   - answers are cached in MongoDB (GeoCache) so nothing is asked twice
  */
 
 export class GeoServiceError extends Error {
@@ -25,23 +26,31 @@ export const USER_AGENT =
 
 // ── tests can swap the network and the waiting ─────────────────────────────
 let fetchImpl = (...args) => globalThis.fetch(...args);
-let minIntervalMs = 1100; // a little over 1 second, to stay safely under "1 request per second"
+// Minimum gap between two requests to the same service (ms).
+const INTERVALS = {
+  nominatim: 1100, // policy: max 1 request per second
+  osrm: 1100, // policy: max 1 request per second
+  wikipedia: 250,
+  openmeteo: 150, // free tier: 600 calls per minute
+};
+let intervalOverride = null;
 
 /** Tests only: fake fetch (or null for the real one) and the gap between requests. */
 export const setGeoFetch = (fn) => {
   fetchImpl = fn ?? ((...args) => globalThis.fetch(...args));
 };
 export const setGeoInterval = (ms) => {
-  minIntervalMs = ms;
+  intervalOverride = ms;
 };
+const gapFor = (service) => intervalOverride ?? INTERVALS[service] ?? 1000;
 
-/** A one-at-a-time queue that keeps `minIntervalMs` between the START of two requests. */
-const createThrottle = () => {
+/** A one-at-a-time queue that keeps a minimum gap between the START of two requests. */
+const createThrottle = (service) => {
   let chain = Promise.resolve();
   let lastStart = 0;
   return (task) => {
     const run = chain.then(async () => {
-      const wait = lastStart + minIntervalMs - Date.now();
+      const wait = lastStart + gapFor(service) - Date.now();
       if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
       lastStart = Date.now();
       return task();
@@ -51,7 +60,7 @@ const createThrottle = () => {
   };
 };
 
-const throttles = { nominatim: createThrottle(), osrm: createThrottle() };
+const throttles = Object.fromEntries(Object.keys(INTERVALS).map((service) => [service, createThrottle(service)]));
 
 /** GET JSON from a map service (queued, with timeout and our User-Agent). */
 export const getJson = (service, url, { signal } = {}) =>

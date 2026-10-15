@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Clock, MapPin, IndianRupee, Lightbulb, Compass, RefreshCw, Loader2, Navigation, Car } from 'lucide-react';
 import { LIMITS, TRAVEL_STYLES, formatDate, formatDuration, formatINR, formatKm, mapStops } from '@tripplanner/shared';
+import WeatherIcon from './travel/WeatherIcon';
 
 /**
  * One day of the itinerary. Part 8: the drive between stops comes from the day's road route.
@@ -65,7 +66,7 @@ const RegeneratePanel = ({ day, aiOn, onSubmit, onClose }) => {
   );
 };
 
-export const DayTimeline = ({ day, onRegenerate, regenerating = false, regenerateBlocked = null, aiOn = false }) => {
+export const DayTimeline = ({ day, weather = null, onRegenerate, regenerating = false, regenerateBlocked = null, aiOn = false }) => {
   const [panelOpen, setPanelOpen] = useState(false);
 
   // Drive to the next stop, keyed by activity id (only when the route matches today's stops).
@@ -107,6 +108,20 @@ export const DayTimeline = ({ day, onRegenerate, regenerating = false, regenerat
               <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-100">
                 <IndianRupee className="w-3.5 h-3.5" />
                 <span>Est. Daily Cost: {formatINR(day.estimatedDailyExpense)}</span>
+              </div>
+            )}
+            {weather && Number.isFinite(weather.tMax) && (
+              <div
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-sky-50 text-sky-900 text-xs font-semibold border border-sky-100"
+                data-testid="day-weather"
+                title={weather.kind === 'typical' ? 'Typical weather for this date (not a forecast)' : weather.kind === 'actual' ? 'Weather on that day' : 'Forecast'}
+              >
+                <WeatherIcon icon={weather.icon} className="w-4 h-4" />
+                <span>
+                  {weather.summary} • {Math.round(weather.tMax)}°/{Math.round(weather.tMin)}°
+                  {weather.kind === 'forecast' && Number.isFinite(weather.rainChance) ? ` • ${weather.rainChance}% rain` : ''}
+                  {weather.kind === 'typical' ? ' (usual)' : ''}
+                </span>
               </div>
             )}
             {route && (

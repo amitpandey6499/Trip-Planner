@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
@@ -9,6 +10,39 @@ import {
 } from 'lucide-react';
 import { projectInfo } from '@tripplanner/shared';
 import QuickSearchForm from '../components/QuickSearchForm';
+import DestinationCard from '../components/DestinationCard';
+import { destinationApi } from '../services/api';
+
+/** Part 10: four destinations in season this month (real data from the catalog). */
+const InSeasonDestinations = () => {
+  const [list, setList] = useState(null);
+  useEffect(() => {
+    let active = true;
+    destinationApi
+      .list({ sort: 'season' })
+      .then((res) => active && setList(res.data.slice(0, 4)))
+      .catch(() => active && setList([]));
+    return () => {
+      active = false;
+    };
+  }, []);
+  if (list === null) {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="bg-white rounded-2xl h-80 animate-pulse border border-slate-100" />
+        ))}
+      </div>
+    );
+  }
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      {list.map((d) => (
+        <DestinationCard key={d.slug} destination={d} />
+      ))}
+    </div>
+  );
+};
 
 export const Home = () => {
   return (
@@ -162,16 +196,12 @@ export const Home = () => {
             <span className="text-xs font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2.5 py-1 rounded-full">
               Explore India
             </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">
-              Featured Destinations
-            </h2>
-            <p className="text-sm text-slate-500 mt-1">
-              Top curated locations ready for instant AI itinerary generation.
-            </p>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-2">Good time to go now</h2>
+            <p className="text-sm text-slate-500 mt-1">Destinations whose best season is this month.</p>
           </div>
 
           <Link
-            to="/explore"
+            to="/explore?sort=season"
             className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-700 flex items-center gap-1 group"
           >
             <span>View All</span>
@@ -179,117 +209,7 @@ export const Home = () => {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          
-          {/* Destination 1: Manali */}
-          <Link
-            to="/itinerary"
-            className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-soft-lg hover:-translate-y-1 transition-all"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-              <img
-                src="https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=800&q=80"
-                alt="Manali"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <span className="absolute bottom-3 left-3 bg-white/95 px-2 py-0.5 rounded-md text-xs font-bold text-slate-800">
-                ⭐ 4.8
-              </span>
-            </div>
-            <div className="p-4">
-              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                Manali
-              </h3>
-              <p className="text-xs text-slate-500">Himachal Pradesh</p>
-              <div className="flex gap-1 mt-2">
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Mountains</span>
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Adventure</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* Destination 2: Goa */}
-          <Link
-            to="/explore"
-            className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-soft-lg hover:-translate-y-1 transition-all"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-              <img
-                src="https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=800&q=80"
-                alt="Goa"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <span className="absolute bottom-3 left-3 bg-white/95 px-2 py-0.5 rounded-md text-xs font-bold text-slate-800">
-                ⭐ 4.7
-              </span>
-            </div>
-            <div className="p-4">
-              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                Goa
-              </h3>
-              <p className="text-xs text-slate-500">Arabian Sea Coast</p>
-              <div className="flex gap-1 mt-2">
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Beaches</span>
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Nightlife</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* Destination 3: Udaipur */}
-          <Link
-            to="/explore"
-            className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-soft-lg hover:-translate-y-1 transition-all"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-              <img
-                src="https://images.unsplash.com/photo-1615836245337-f5b9b2303f10?auto=format&fit=crop&w=800&q=80"
-                alt="Udaipur"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <span className="absolute bottom-3 left-3 bg-white/95 px-2 py-0.5 rounded-md text-xs font-bold text-slate-800">
-                ⭐ 4.6
-              </span>
-            </div>
-            <div className="p-4">
-              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                Udaipur
-              </h3>
-              <p className="text-xs text-slate-500">Rajasthan</p>
-              <div className="flex gap-1 mt-2">
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Lakes</span>
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Heritage</span>
-              </div>
-            </div>
-          </Link>
-
-          {/* Destination 4: Kerala */}
-          <Link
-            to="/explore"
-            className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-soft hover:shadow-soft-lg hover:-translate-y-1 transition-all"
-          >
-            <div className="relative aspect-[4/3] overflow-hidden bg-slate-100">
-              <img
-                src="https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=800&q=80"
-                alt="Kerala"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <span className="absolute bottom-3 left-3 bg-white/95 px-2 py-0.5 rounded-md text-xs font-bold text-slate-800">
-                ⭐ 4.7
-              </span>
-            </div>
-            <div className="p-4">
-              <h3 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
-                Kerala
-              </h3>
-              <p className="text-xs text-slate-500">God's Own Country</p>
-              <div className="flex gap-1 mt-2">
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Backwaters</span>
-                <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full">Nature</span>
-              </div>
-            </div>
-          </Link>
-
-        </div>
+        <InSeasonDestinations />
       </section>
 
       {/* 5. HOW IT WORKS */}

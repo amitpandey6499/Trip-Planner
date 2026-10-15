@@ -16,3 +16,9 @@ process.env.MAP_ENABLED = 'true';
 process.env.NOMINATIM_URL = 'http://nominatim.test';
 process.env.OSRM_URL = 'http://osrm.test';
 process.env.NOMINATIM_EMAIL = '';
+// Part 10 / 11 outside services: fake fetch in tests too.
+process.env.PHOTOS_ENABLED = 'true';
+process.env.WIKIPEDIA_API_URL = 'http://wikipedia.test/w/api.php';
+process.env.WEATHER_ENABLED = 'true';
+process.env.OPEN_METEO_URL = 'http://open-meteo.test';
+process.env.OPEN_METEO_ARCHIVE_URL = 'http://archive.open-meteo.test';

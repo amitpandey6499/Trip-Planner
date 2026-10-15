@@ -38,3 +38,58 @@ export const RegenerateDaySchema = z
     note: optionalText('Note', LIMITS.MAX_DAY_NOTE_LENGTH).optional(),
   })
   .refine((data) => data.dayNumber <= data.itinerary.days.length, { path: ['dayNumber'], message: 'That day is not part of this trip.' });
+
+// ── Part 10 / 11 query strings ───────────────────────────────────────────────
+const month = z.coerce.number().int().min(1).max(12).optional().catch(undefined);
+const placeText = (label) => z.string({ error: `${label} is required.` }).trim().min(2, `${label} is required.`).max(LIMITS.MAX_DESTINATION_LENGTH);
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Dates must look like YYYY-MM-DD.');
+
+/** GET /api/destinations?q=&category=&sort=&month= */
+export const DestinationListQuery = z.object({
+  q: z.string().trim().max(60).optional().default(''),
+  category: z.string().trim().max(30).optional().default('All'),
+  sort: z.enum(['popular', 'name', 'budget', 'season']).optional().default('popular').catch('popular'),
+  month,
+});
+
+/** GET /api/recommendations/hotels?destination=&budget=&checkIn=&checkOut=&travelers= */
+export const StaysQuery = z.object({
+  destination: placeText('Destination'),
+  budget: z.enum(['All', 'Budget', 'Moderate', 'Luxury']).optional().default('All').catch('All'),
+  checkIn: isoDay.optional().catch(undefined),
+  checkOut: isoDay.optional().catch(undefined),
+  travelers: z.coerce.number().int().min(1).max(LIMITS.MAX_TRAVELERS).optional().default(2).catch(2),
+});
+
+/** GET /api/recommendations/restaurants?destination=&veg=1 */
+export const RestaurantsQuery = z.object({
+  destination: placeText('Destination'),
+  veg: z
+    .enum(['1', '0', 'true', 'false'])
+    .optional()
+    .transform((v) => v === '1' || v === 'true')
+    .catch(false),
+});
+
+/** GET /api/travel/weather?destination=&start=&end=&lat=&lng= */
+export const WeatherQuery = z
+  .object({
+    destination: placeText('Destination'),
+    start: isoDay,
+    end: isoDay,
+    lat: z.coerce.number().min(-90).max(90).optional().catch(undefined),
+    lng: z.coerce.number().min(-180).max(180).optional().catch(undefined),
+  })
+  .refine((q) => q.end >= q.start, { path: ['end'], message: 'End date cannot be before start date.' })
+  .refine((q) => (Date.parse(q.end) - Date.parse(q.start)) / 86400000 < LIMITS.MAX_TRIP_DAYS, {
+    path: ['end'],
+    message: `At most ${LIMITS.MAX_TRIP_DAYS} days.`,
+  });
+
+/** GET /api/travel/reach?from=&to=&date=&travelers= */
+export const ReachQuery = z.object({
+  from: placeText('Starting city'),
+  to: placeText('Destination'),
+  date: isoDay.optional().catch(undefined),
+  travelers: z.coerce.number().int().min(1).max(LIMITS.MAX_TRAVELERS).optional().default(2).catch(2),
+});

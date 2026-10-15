@@ -22,10 +22,12 @@ import {
   Database,
   Undo2,
   Loader2,
+  CloudSun,
+  Navigation,
 } from 'lucide-react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import confetti from 'canvas-confetti';
-import { ITINERARY_SOURCES, LIMITS, addDays, formatDate, formatINR, todayIso } from '@tripplanner/shared';
+import { ITINERARY_SOURCES, LIMITS, addDays, bookingSearchUrl, formatDate, formatINR, mapsSearchUrl, todayIso } from '@tripplanner/shared';
 import { useTrip } from '../context/TripContext';
 import { useTripFromUrl } from '../hooks/useTripFromUrl';
 import { PageLoader, TripNotFound } from '../components/PageState';
@@ -35,6 +37,20 @@ import InteractiveMap from '../components/InteractiveMap';
 import HotelCard from '../components/HotelCard';
 import RestaurantCard from '../components/RestaurantCard';
 import CostBreakdown from '../components/CostBreakdown';
+import WeatherPanel from '../components/travel/WeatherPanel';
+import PackingList from '../components/travel/PackingList';
+import ReachPanel from '../components/travel/ReachPanel';
+import { useWeather } from '../hooks/useWeather';
+import { destinationApi } from '../services/api';
+
+/** Booking / Maps links for a stay of the plan: areas ("Mid-range hotel near X") search the area, hotels their name. */
+const stayLinks = (hotel, itinerary) => {
+  const place = / near /.test(hotel.name) && hotel.address ? hotel.address : `${hotel.name}, ${itinerary.destination}`;
+  return {
+    booking: bookingSearchUrl({ place, checkIn: itinerary.startDate, checkOut: itinerary.endDate, adults: itinerary.travelersCount }),
+    maps: mapsSearchUrl(/ near /.test(hotel.name) ? `hotels near ${place}` : place),
+  };
+};
 
 /** Plain-text version of the itinerary for the clipboard (real share links come in Part 14). */
 const itineraryAsText = (it) =>
@@ -88,6 +104,9 @@ const ItineraryPage = () => {
     dayLoading,
     mapStatus,
     updateMap,
+    packingChecked,
+    togglePacked,
+    setOriginCity,
   } = useTrip();
   const { status: systemStatus } = useSystemStatus();
   const aiOn = Boolean(systemStatus?.services?.geminiAI);
@@ -97,6 +116,31 @@ const ItineraryPage = () => {
   const [copied, setCopied] = useState(false);
   // "View on Map" from a stay / restaurant card: { kind: 'stay' | 'food', id, at }
   const [mapFocus, setMapFocus] = useState(null);
+
+  // Part 11: weather for the trip dates (at the first real place of the plan) and the destination's facts for packing.
+  const firstPlace = currentItinerary?.days?.flatMap((d) => d.activities).find((a) => a.coordinates && a.locationSource && a.locationSource !== 'none');
+  const weather = useWeather({
+    destination: currentItinerary?.destination,
+    start: currentItinerary?.startDate,
+    end: currentItinerary?.endDate,
+    lat: firstPlace?.coordinates.lat,
+    lng: firstPlace?.coordinates.lng,
+    enabled: Boolean(currentItinerary?.startDate && currentItinerary?.endDate),
+  });
+  const weatherByDate = new globalThis.Map((weather.data?.days ?? []).map((d) => [d.date, d]));
+  const [destinationFacts, setDestinationFacts] = useState(null);
+  const destinationName = currentItinerary?.destination;
+  useEffect(() => {
+    if (!destinationName) return undefined;
+    let active = true;
+    destinationApi
+      .get(destinationName)
+      .then((res) => active && setDestinationFacts(res.data))
+      .catch(() => active && setDestinationFacts(null));
+    return () => {
+      active = false;
+    };
+  }, [destinationName]);
   const showOnMap = (kind) => (place) => {
     setMapFocus({ kind, id: place.id, at: Date.now() });
     setActiveTab('map');
@@ -371,6 +415,8 @@ const ItineraryPage = () => {
             { id: 'hotels', label: 'Hotels', icon: Bed },
             { id: 'restaurants', label: 'Restaurants', icon: Utensils },
             { id: 'cost', label: 'Cost Breakdown', icon: PieChart },
+            { id: 'weather', label: 'Weather & Packing', icon: CloudSun },
+            { id: 'reach', label: 'Getting there', icon: Navigation },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -463,6 +509,7 @@ const ItineraryPage = () => {
             <div className="lg:col-span-8">
               <DayTimeline
                 day={selectedDay}
+                weather={weatherByDate.get(selectedDay?.date)}
                 aiOn={aiOn}
                 onRegenerate={regenerateDay}
                 regenerating={dayLoading === selectedDay?.dayNumber}
@@ -534,6 +581,7 @@ const ItineraryPage = () => {
                 <HotelCard
                   key={hotel.id || idx}
                   hotel={hotel}
+                  links={stayLinks(hotel, currentItinerary)}
                   onSelectOnMap={showOnMap('stay')}
                 />
               ))}
@@ -568,6 +616,7 @@ const ItineraryPage = () => {
                 <RestaurantCard
                   key={restaurant.id || idx}
                   restaurant={restaurant}
+                  links={{ maps: mapsSearchUrl(`${restaurant.name}, ${currentItinerary.destination}`) }}
                   onSelectOnMap={showOnMap('food')}
                 />
               ))}
@@ -578,6 +627,47 @@ const ItineraryPage = () => {
         {/* TAB E: COST BREAKDOWN */}
         {activeTab === 'cost' && (
           <CostBreakdown itinerary={currentItinerary} />
+        )}
+
+        {/* TAB F: WEATHER & PACKING (Part 11) */}
+        {activeTab === 'weather' && (
+          <div className="space-y-6">
+            <section className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-soft space-y-3">
+              <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+                <CloudSun className="w-5 h-5 text-blue-600" /> Weather for your dates
+              </h3>
+              <WeatherPanel weather={weather} />
+            </section>
+            <section className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-soft space-y-3">
+              <h3 className="text-xl font-bold text-slate-900">Packing list</h3>
+              <PackingList
+                itinerary={currentItinerary}
+                preferences={planPreferences ?? {}}
+                weatherDays={weather.data?.days ?? null}
+                destination={destinationFacts}
+                checked={packingChecked}
+                onToggle={togglePacked}
+                saved={isSaved}
+              />
+            </section>
+          </div>
+        )}
+
+        {/* TAB G: GETTING THERE (Part 11) */}
+        {activeTab === 'reach' && (
+          <section className="bg-white rounded-2xl p-5 sm:p-6 border border-slate-100 shadow-soft space-y-3">
+            <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <Navigation className="w-5 h-5 text-blue-600" /> Getting to {currentItinerary.destination}
+            </h3>
+            <ReachPanel
+              key={currentItinerary.destination}
+              destination={currentItinerary.destination}
+              date={currentItinerary.startDate}
+              travelers={currentItinerary.travelersCount}
+              initialCity={planPreferences?.originCity ?? ''}
+              onCityChange={setOriginCity}
+            />
+          </section>
         )}
 
       </div>

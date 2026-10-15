@@ -25,8 +25,8 @@
 | 7 | Deploy v1 (live URL) + CI | 6 | ⏭ Skipped (deploy Part 18 mein) |
 | 8 | Real map: geocoding + road routes | 6 | ✅ Done |
 | 9 | Streaming generation + regenerate one day | 6 | ✅ Done |
-| 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ⬜ |
-| 11 | Weather + packing list + "How to reach" | 6, 8 | ⬜ |
+| 10 | Destinations, photos, hotels, favorites | 3, 4, 8 | ✅ Done |
+| 11 | Weather + packing list + "How to reach" | 6, 8 | ✅ Done |
 | 12 | Itinerary editor (drag & drop) | 5, 8 | ⬜ |
 | 13 | AI Trip Chat | 6, 12 | ⬜ |
 | 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ⬜ |
@@ -207,15 +207,44 @@ Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Pa
 
 **Depends on:** 6 — **Affects:** 12, 13
 
-### Part 10 — Destinations, photos, hotels, favorites
-- Destinations DB mein (20+ Indian destinations), categories sahi (Popular/Hidden Gems ab khaali nahi).
-- Real photos (Wikipedia/Unsplash service + cache). Hotels tier filter sach mein filter kare.
-- Favorites ❤️ DB mein save.
+### Part 10 — Destinations, photos, hotels, favorites ✅
+**Kya kiya**
+- **26 Indian destinations MongoDB mein** (`Destination` model, `server/src/data/destinationCatalog.js` se seed, server start pe apne-aap).
+  Har ek: state, categories, interests, best months, ideal days, typical daily cost (Budget/Moderate/Luxury), center, terrain,
+  airport / railway / road info, stays (areas + typical room price), eateries, notes. Purana `destinations.json` hata diya.
+- **Explore:** sab categories bhari hui (Popular, Beaches, Mountains, Cultural, Adventure, Spiritual, Hidden Gems), search,
+  sort (popular / naam / budget / "good time to go now"), filters URL mein (`?category=&sort=&q=`), "My favourites (N)".
+- **Destination page** `/destinations/:slug`: photo + credit, about, best months (is mahine pe ring), daily cost, 7 din ka mausam,
+  "How to get there", stays, food, notes. "Plan a trip here" wizard ko prefill karta hai.
+- **Real photos (Wikipedia):** har destination ke Wikipedia article ki lead image (sirf free licence), file page ka link (credit),
+  DB mein cache — 30 din baad refresh, miss pe 24 h baad dobara try. Background mein, zyada se zyada 4 requests/second. `npm run photos -w server`.
+  Photo na mile → saaf placeholder (galat stock photo nahi). Itinerary ki cover image bhi yahi photo.
+- **Stays (`/hotels`)**: koi nakli hotel nahi — areas jahan rukna accha hai + har tier ka typical room price + **Booking.com search link**
+  (dates, guests ke saath) + Google Maps link. **Tier filter sach mein filter karta hai.** Google Places key ho to asli hotels + rating.
+- **Food (`/restaurants`)**: curated places, **Pure veg only** filter, cost for two; list nahi hai to saaf bata deta hai.
+- **Favourites ❤️ account mein** (`User.favorites`, `GET/PUT/DELETE /api/favorites/:slug`); guest ko login pe bhejta hai aur wapas.
+- Home: "Good time to go now" (is mahine ke best destinations) — purane hardcoded cards aur nakli ⭐ ratings hata diye.
+- HotelsView / RestaurantsView ke 2 lint warnings khatam (pages naye likhe) → **lint 0 warnings**.
+- Tests: 9 server (catalog, search/sort, aliases, stays/food, favourites, photos with fake Wikipedia), browser.
 
-### Part 11 — Weather + packing list + how to reach
-- Open-Meteo: trip dates ka per-day forecast (16 din tak), uske baad climate average.
-- Mausam + activities ke hisaab se packing list.
-- Starting city → train/bus/flight suggestions + IRCTC / redBus / Google Flights search links.
+**Depends on:** 3, 4, 8 — **Affects:** 11, 12, 16
+
+### Part 11 — Weather + packing list + how to reach ✅
+**Kya kiya**
+- **Weather (Open-Meteo)** `GET /api/travel/weather`: agle **16 din** = asli forecast (max/min °C, baarish %, icon);
+  usse aage = **"typical"** (pichhle 3 saal ki same dates ka average, saaf likha "usual — not a forecast"); beete din = actual.
+  Cache: forecast 3 h, typical 180 din. Attribution "Weather data by Open-Meteo.com" (CC BY 4.0). Service down → 503 + saaf message.
+- Itinerary mein **"Weather & Packing"** tab + har din ke upar mausam chip ("Rain • 15°/2° • 70% rain").
+- **Packing list** (`shared/src/utils/packing.js`): mausam (thand, garmi, baarish), plan ki activities (temples, beach, trek, rafting,
+  desert...), destination ka terrain (high altitude, remote), food preference aur log — har item ke saath **kyun** (reason).
+  Ticks trip ke saath save (`packingChecked`, thoda ruk ke PUT), "Print list".
+- **How to reach** `GET /api/travel/reach?from=&to=&date=`: starting city (27 shehar, airport + station codes ke saath; ya map se dhoondha shehar)
+  → ✈️ flight / 🚆 train / 🚌 bus / 🚗 car / ⛴️ ship, andaaze ka time, steps, aur **Google Flights / IRCTC / redBus / Google Maps** links.
+  "Best fit" distance aur time se (14 h se lamba road/rail → flight; islands → flight). Koi fare nahi banaya.
+- Wizard step 3 mein **"Starting from"** (optional) — trip ke saath save, "Getting there" tab mein badla ja sakta hai.
+- Tests: 7 server (fake Open-Meteo / OSRM / Nominatim), shared (weather codes, cities, packing rules), browser.
+
+**Depends on:** 6, 8 — **Affects:** 12, 13, 14
 
 ### Part 12 — Itinerary editor
 - `@dnd-kit` drag & drop: activity reorder, add, edit, delete; budget + route auto update; save.

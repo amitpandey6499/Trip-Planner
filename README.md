@@ -17,6 +17,7 @@ server are described in **[docs/CONTRACTS.md](docs/CONTRACTS.md)**.
 | --- | --- |
 | Frontend | React 18, Vite 6, Tailwind CSS 3, React Router, Leaflet + OpenStreetMap |
 | Maps | Nominatim (place positions) + OSRM (road routes), cached in MongoDB — see [docs/MAP_SERVICES.md](docs/MAP_SERVICES.md) |
+| Photos & weather | Wikipedia lead images (free licences, cached 30 days) · Open-Meteo forecast + archive ("typical" weather), CC BY 4.0 |
 | Live updates | Server-Sent Events (generation progress, map progress) |
 | Backend | Node.js, Express 5, Helmet, express-rate-limit |
 | Database | MongoDB Atlas + Mongoose |
@@ -32,15 +33,18 @@ tripplanner/
 ├── package.json          # npm workspaces + root scripts (dev, check, test, lint, build)
 ├── eslint.config.js
 ├── docs/                 # ROADMAP, CHANGELOG, CONTRACTS, SETUP_MONGODB, MAP_SERVICES
-├── shared/               # code used by BOTH client and server: schemas, constants, date/budget utils
+├── shared/               # code used by BOTH client and server: schemas, constants, date/budget/map utils,
+│                         # weather codes, packing list, booking links, origin cities
 ├── server/               # Express API
 │   ├── src/config/env.js # all settings, loaded from server/.env and validated
-│   ├── src/models/       # Mongoose: User, Trip, ContactMessage, AiCache, AiUsage, GeoCache
+│   ├── src/models/       # Mongoose: User, Trip, Destination, ContactMessage, AiCache, AiUsage, GeoCache
+│   ├── src/data/         # destination catalog (26 Indian destinations, seeded on start)
 │   ├── src/services/ai/  # Gemini client (+ streaming), prompt, cache/limit, offline planner
-│   ├── src/services/geo/ # Nominatim geocoder, OSRM router, map update (Part 8)
+│   ├── src/services/geo/ # Nominatim geocoder, OSRM router, map update (Part 8), shared HTTP queue + cache
+│   ├── src/services/     # + destinations, photos (Wikipedia), stays/food, favourites, weather, how to reach
 │   ├── src/middleware/   # JWT auth, validation, error handler, rate limits
 │   ├── src/controllers/  ├── src/routes/  ├── src/services/
-│   ├── scripts/          # seed (demo account), test database helper
+│   ├── scripts/          # seed (demo account), photos (refresh destination photos), test database helper
 │   └── test/             # API + auth tests (node --test + supertest)
 └── client/               # React app (Vite)
 ```
@@ -95,6 +99,12 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | `/map` | The open trip on the map (road routes, stays, restaurants) |
 | `/trips/:id/edit` | Edit a saved trip's preferences and regenerate it |
 | `/my-trips` | Saved trips: Upcoming / Ongoing / Past tabs, search, sort, rename |
+| `/explore` | 26 destinations: categories, search, sort (incl. "good time to go now"), my favourites (`?category=&sort=&q=`) |
+| `/destinations/:slug` | One destination: photo, best months, daily cost, 7-day weather, how to get there, stays, food |
+| `/hotels?destination=&budget=` | Where to stay: areas with typical prices per tier + Booking.com / Google Maps search links |
+| `/restaurants?destination=&veg=1` | Where to eat, pure-veg filter |
+
+Inside a trip: tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks) and **Getting there** (flight / train / bus / car from your city).
 
 ## Useful commands (run from the project root)
 
@@ -103,6 +113,7 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | `npm run dev` | Start server and client together |
 | `npm test` | Run shared + server tests (first run downloads an in-memory MongoDB once, ~70 MB) |
 | `npm run seed -w server -- --reset` | Recreate the demo account and its sample trip |
+| `npm run photos -w server` | Look up all destination photos on Wikipedia again (normally automatic on server start) |
 | `npm run lint` | ESLint on the whole project |
 | `npm run build` | Production build of the client |
 | `npm run check` | lint + tests + build — must pass after every roadmap part |
@@ -122,10 +133,15 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | POST | `/api/map/enrich` | ✔ | Place positions + road routes for an unsaved itinerary (stream or JSON) |
 | POST | `/api/trips/:id/map` | ✔ | Same for a saved trip; the result is stored with the trip |
 | GET / POST | `/api/trips` | ✔ | List my trips / save (or update with `tripData.id`) |
-| GET / PUT / DELETE | `/api/trips/:id` | ✔ | Read / update allowed fields (title, dates, travelers, budget) / delete — own trips only |
-| GET | `/api/places/search?q=&category=` | – | Search destinations |
-| GET | `/api/recommendations/hotels?destination=` | – | Hotel suggestions |
-| GET | `/api/recommendations/restaurants?destination=` | – | Restaurant suggestions |
+| GET / PUT / DELETE | `/api/trips/:id` | ✔ | Read / update allowed fields (title, dates, travelers, budget, starting city, packing ticks) / delete — own trips only |
+| GET | `/api/destinations?q=&category=&sort=` | – | Destinations from MongoDB (`sort` = popular, name, budget, season) |
+| GET | `/api/destinations/:slug` | – | One destination with stays, food, how to reach, notes |
+| GET | `/api/recommendations/hotels?destination=&budget=&checkIn=&checkOut=&travelers=` | – | Stay areas per tier with typical prices + booking search links (real hotels only with a Google Places key) |
+| GET | `/api/recommendations/restaurants?destination=&veg=1` | – | Places to eat, optional pure-veg filter |
+| GET / PUT / DELETE | `/api/favorites`, `/api/favorites/:slug` | ✔ | My favourite destinations |
+| GET | `/api/travel/weather?destination=&start=&end=` | – | Weather per day: forecast (16 days), then typical weather (Open-Meteo) |
+| GET | `/api/travel/reach?from=&to=&date=` | – | Flight / train / bus / car from a city, estimated times + Google Flights / IRCTC / redBus / Maps links |
+| GET | `/api/places/search?q=` | – | Old name for `/api/destinations` (kept for old links) |
 | POST | `/api/contact` | – | Contact form message (stored in MongoDB) |
 
 Every error response has the shape `{ "success": false, "error": "message", "details": { ... } }` with a proper HTTP status code.
