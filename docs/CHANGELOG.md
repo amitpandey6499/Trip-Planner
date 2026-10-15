@@ -4,6 +4,41 @@ Har roadmap part ka delivery note: kya badla, kis part pe asar, naye env variabl
 
 ---
 
+## Part 17 — Admin dashboard (tag `part-17`)
+
+**Part 16 (UI polish) skip kiya** (tumhare kehne pe).
+
+### Chalane ke liye
+1. `npm install` (koi naya package nahi)
+2. `server/.env` mein `ADMIN_EMAILS=tumhara@email.com` (ya account banane ke baad `npm run admin -w server -- add tumhara@email.com`)
+3. `npm run dev` → login → menu (naam pe click) → **Admin dashboard**
+
+**Naya env variable (optional):** `ADMIN_EMAILS`.
+
+### Kya badla
+| Pehle | Ab |
+| --- | --- |
+| `role: 'admin'` model mein tha, use kahin nahi | admin = `ADMIN_EMAILS` ya stored role; `/api/admin/*` sirf admins ke liye |
+| Contact form ke messages sirf database mein | **inbox**: padho, read / unread, reply, delete |
+| App kaise use ho raha hai, pata nahi | **dashboard**: trips / sign-ups / AI plans per day, popular destinations, plan source, cache, KPIs |
+
+### Naye files
+- `server/src/services/adminService.js`, `server/src/controllers/adminController.js`, `server/src/routes/adminRoutes.js`,
+  `server/scripts/admin.js` (`npm run admin -w server`), `server/test/admin.test.js`
+- `client/src/pages/AdminDashboard.jsx`, `client/src/components/admin/Charts.jsx` (DailyColumns, RankedBars, StatTile — bina chart library)
+- Shared: `AdminStatsQuery` (`ADMIN_RANGES` 7 / 30 / 90), `MessageStatusSchema`, `AdminUsersQuery`
+
+### Data contract
+- Koi naya collection nahi. `ApiError.conflict` (409) helper. `docs/CONTRACTS.md` → "Admin".
+
+### Tests
+- Server **97** (naye 3), shared 61. Browser 5 checks (normal user → "Admins only" + API 403; admin menu, KPIs, chart hover,
+  table view, 7 days; inbox read / filter / delete; accounts search; phone). Purane sab browser checks pass.
+- Sandbox ka test database nested field projection support nahi karta (asli MongoDB karta hai) — isliye plan source
+  filter se gina jaata hai, dono pe chalta hai.
+
+---
+
 ## Part 15 — Expense tracker + bill split (tag `part-15`)
 
 ### Chalane ke liye

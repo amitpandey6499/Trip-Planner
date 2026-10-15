@@ -105,3 +105,23 @@ export const TripPdfSchema = z.object({
   itinerary: looseItinerary,
   tripId: z.string().trim().max(64).optional(),
 });
+
+/** GET /api/admin/stats?days= (Part 17) — how many days the "per day" charts cover. */
+export const ADMIN_RANGES = Object.freeze([7, 30, 90]);
+export const AdminStatsQuery = z.object({
+  days: z.coerce
+    .number()
+    .int()
+    .refine((d) => ADMIN_RANGES.includes(d), 'Pick 7, 30 or 90 days.')
+    .default(30),
+});
+
+/** PUT /api/admin/messages/:id — mark a contact message read / unread. */
+export const MessageStatusSchema = z.object({
+  status: z.enum(['new', 'read'], { error: 'Status must be new or read.' }),
+});
+
+/** GET /api/admin/users?q= */
+export const AdminUsersQuery = z.object({
+  q: z.string().trim().max(80).optional().default(''),
+});

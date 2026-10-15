@@ -9,6 +9,7 @@ process.env.GOOGLE_PLACES_API_KEY = '';
 process.env.MONGODB_URI = '';
 process.env.JWT_SECRET = 'test-secret-that-is-long-enough-0123456789';
 process.env.DEMO_LOGIN_ENABLED = 'true';
+process.env.ADMIN_EMAILS = 'boss@example.com, Second.Admin@example.com';
 process.env.AI_DAILY_LIMIT = '3';
 process.env.AI_CACHE_DAYS = '7';
 // Map services are never called for real in tests: they get a fake fetch (test/map.test.js).

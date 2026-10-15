@@ -127,6 +127,15 @@ export const expenseApi = {
   setMembers: (tripId, members) => data(api.put(`/trips/${tripId}/members`, { members })),
 };
 
+// Part 17 — admin dashboard (admins only)
+export const adminApi = {
+  stats: (days) => data(api.get('/admin/stats', { params: { days } })),
+  messages: (status = 'all') => data(api.get('/admin/messages', { params: { status } })),
+  setMessage: (id, status) => data(api.put(`/admin/messages/${id}`, { status })),
+  deleteMessage: (id) => data(api.delete(`/admin/messages/${id}`)),
+  users: (q = '') => data(api.get('/admin/users', { params: { q } })),
+};
+
 // Part 11 — weather for the trip dates, how to get there
 export const travelApi = {
   weather: (params) => data(api.get('/travel/weather', { params })),

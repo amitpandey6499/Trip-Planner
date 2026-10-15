@@ -10,6 +10,7 @@
     "dev": "nodemon src/server.js",
     "seed": "node scripts/seed.js",
     "photos": "node scripts/photos.js",
+    "admin": "node scripts/admin.js",
     "test": "node --import ./scripts/setup-tests.js --test --test-concurrency=1"
   },
   "dependencies": {

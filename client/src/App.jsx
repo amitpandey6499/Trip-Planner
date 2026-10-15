@@ -26,6 +26,7 @@ import About from './pages/About';
 import Contact from './pages/Contact';
 import NotFound from './pages/NotFound';
 import SharedTripPage from './pages/SharedTripPage';
+import AdminDashboard from './pages/AdminDashboard';
 
 /** A crash on one page shows a friendly message; moving to another page clears it. */
 const ErrorBoundaryForRoute = ({ children }) => {
@@ -70,6 +71,7 @@ export const App = () => {
                   <Route path="/trips/new" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
                   <Route path="/trips/:id" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
                   <Route path="/trips/:id/edit" element={<ProtectedRoute><CreateTrip /></ProtectedRoute>} />
+                  <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
                   {/* A freshly generated, not-yet-saved itinerary */}
                   <Route path="/itinerary" element={<ProtectedRoute><ItineraryView /></ProtectedRoute>} />
                   <Route path="/my-trips" element={<ProtectedRoute><MyTrips /></ProtectedRoute>} />

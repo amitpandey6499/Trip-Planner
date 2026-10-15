@@ -105,6 +105,7 @@ AI unreachable, bad key, model retired ...) → a clear error if that destinatio
 | `/hotels?destination=&budget=` | Where to stay: areas with typical prices per tier + Booking.com / Google Maps search links |
 | `/restaurants?destination=&veg=1` | Where to eat, pure-veg filter |
 | `/share/:slug` | A trip someone shared: read-only days, map, stays, costs; PDF, calendar, "Save a copy to my trips" (no login needed to view) |
+| `/admin` | Admin dashboard (admins only): usage charts, contact messages inbox, accounts |
 
 Inside a trip: **Edit plan** (drag & drop activities inside a day or onto another day, add / edit / remove them, rename days,
 undo / redo — the budget and the road routes follow every change), **Share** (link, QR, WhatsApp, PDF, calendar), and tabs **Weather & Packing** (forecast / typical weather per day, packing list with ticks), **Getting there** (flight / train / bus / car from your city) and **Expenses** (who paid, split equally or exact, settle up, spent vs the plan, CSV).
@@ -117,6 +118,7 @@ undo / redo — the budget and the road routes follow every change), **Share** (
 | `npm test` | Run shared + server tests (first run downloads an in-memory MongoDB once, ~70 MB) |
 | `npm run seed -w server -- --reset` | Recreate the demo account and its sample trip |
 | `npm run photos -w server` | Look up all destination photos on Wikipedia again (normally automatic on server start) |
+| `npm run admin -w server -- add you@example.com` | Give an account the admin dashboard (`remove`, `list` too) |
 | `npm run lint` | ESLint on the whole project |
 | `npm run build` | Production build of the client |
 | `npm run check` | lint + tests + build — must pass after every roadmap part |
@@ -153,6 +155,9 @@ undo / redo — the budget and the road routes follow every change), **Share** (
 | PUT / DELETE | `/api/trips/:id/expenses/:expenseId` | ✔ | Change / delete an expense (or a recorded payment back) |
 | POST | `/api/trips/:id/settlements` | ✔ | Record "A paid B back ₹X" |
 | PUT | `/api/trips/:id/members` | ✔ | The people sharing the costs (names) |
+| GET | `/api/admin/stats?days=7\|30\|90` | admin | Usage numbers and per-day counts |
+| GET / PUT / DELETE | `/api/admin/messages`, `/api/admin/messages/:id` | admin | Contact messages inbox |
+| GET | `/api/admin/users?q=` | admin | Accounts with their trip counts |
 | GET | `/api/places/search?q=` | – | Old name for `/api/destinations` (kept for old links) |
 | POST | `/api/contact` | – | Contact form message (stored in MongoDB) |
 

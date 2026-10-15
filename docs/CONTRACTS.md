@@ -238,3 +238,19 @@ ExpenseInput = { description, amountPaise, category: 'stay'|'food'|'transport'|'
 - Member hatana jab wo kisi expense mein ho → 409. Pehli GET pe default members atomically (do tabs → ek hi list).
 - Trip delete → uske expenses delete. Share page / PDF mein expenses ya members kabhi nahi.
 - CSV: `expensesToCsv(members, expenses)` (client pe; BOM + CRLF, amounts plain rupees 2 decimals).
+
+## Admin (Part 17)
+Sirf admins (stored `role: 'admin'` ya `ADMIN_EMAILS`; demo kabhi nahi). Baaki: 401 / 403.
+```js
+// GET /api/admin/stats?days=7|30|90
+{ data: { range: { days, from, to },
+  totals: { users /* demo ke bina */, trips, sharedTrips, expenses, expensesPaise, messages, unreadMessages },
+  newUsers, newTrips, tripsPerDay: [{ date, count }], signupsPerDay: [...],
+  popularDestinations: [{ destination, trips }] /* top 8, case-insensitive */,
+  planSources: [{ source: 'gemini'|'offline'|'sample', trips }],
+  ai: { enabled, model, dailyLimit, callsToday, usersToday, callsInRange, callsPerDay, cachedPlans },
+  cache: { places, routes, weather } } }
+// GET /api/admin/messages?status=all|new|read  ·  PUT /api/admin/messages/:id { status: 'new'|'read' }  ·  DELETE /api/admin/messages/:id
+// GET /api/admin/users?q=  → [{ id, name, email, role, isDemo, createdAt, lastLoginAt, trips }]  (max 100; q = plain text, not a pattern)
+```
+Din IST (UTC+05:30) mein gine jaate hain. Stats mein koi naam / e-mail / plan nahi.

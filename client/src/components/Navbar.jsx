@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Compass, Sparkles, User, LogOut, Menu, X, BookmarkCheck } from 'lucide-react';
+import { Compass, Sparkles, User, LogOut, Menu, X, BookmarkCheck, LayoutDashboard } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Avatar from './Avatar';
 
@@ -107,6 +107,17 @@ export const Navbar = () => {
                       Profile & Settings
                     </Link>
 
+                    {user.role === 'admin' && (
+                      <Link
+                        to="/admin"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="flex items-center gap-2.5 px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-600 transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4 text-slate-400" />
+                        Admin dashboard
+                      </Link>
+                    )}
+
                     <div className="border-t border-slate-100 my-1"></div>
 
                     <button
@@ -182,6 +193,11 @@ export const Navbar = () => {
                 >
                   Profile & Settings ({user.name})
                 </Link>
+                {user.role === 'admin' && (
+                  <Link to="/admin" onClick={() => setMobileMenuOpen(false)} className="block px-3 py-2 rounded-md text-base text-slate-700 hover:bg-slate-50">
+                    Admin dashboard
+                  </Link>
+                )}
                 <button
                   onClick={async () => {
                     setMobileMenuOpen(false);

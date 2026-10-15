@@ -31,8 +31,8 @@
 | 13 | AI Trip Chat | 6, 12 | ⏸ On hold (baad mein; neev Part 12 mein taiyaar) |
 | 14 | Sharing & export (link, QR, PDF, calendar) | 5 | ✅ Done |
 | 15 | Expense tracker + bill split | 4, 5 | ✅ Done |
-| 16 | UI polish (dark mode, Hindi/English, contact form) | 5 | ⬜ |
-| 17 | Admin dashboard | 4, 15 | ⬜ |
+| 16 | UI polish (dark mode, Hindi/English, contact form) | 5 | ⏭ Skipped (tumhare kehne pe) |
+| 17 | Admin dashboard | 4, 15 | ✅ Done |
 | 18 | Final: tests, API docs, README, report diagrams, final deploy | all | ⬜ |
 
 **Milestones**
@@ -315,11 +315,26 @@ Tumhare kehne pe abhi skip kiya. Koi aage wala part ispe depend nahi karta; **Pa
 
 **Depends on:** 4, 5 — **Affects:** 17 (admin charts), 18
 
-### Part 16 — UI polish
+### Part 16 — UI polish ⏭ (skipped)
 - Dark mode, Hindi/English toggle (AI output bhi Hindi), skeleton loaders, toasts, route-level code-splitting, mobile check.
+- **Skip kiya** (tumhare kehne pe). Jo pehle se hai: toasts (Undo ke saath), har naye page ka phone-size check (390 px),
+  loading states. Baad mein karna ho to: PDF font mein Devanagari pehle se hai; `preferences.language` field taiyaar hai.
 
-### Part 17 — Admin dashboard
-- Admin role; trips/day, popular destinations, AI usage, contact messages — charts.
+### Part 17 — Admin dashboard ✅
+**Kya kiya**
+- **Admin kaun:** `ADMIN_EMAILS` (server `.env`, comma se alag) ya `npm run admin -w server -- add you@example.com`.
+  Demo account kabhi admin nahi. Baaki sab ko `/api/admin/*` pe 403, bina login 401.
+- **`/admin` page** (menu mein "Admin dashboard", sirf admins ko dikhta hai):
+  - Upar numbers: accounts (+naye), saved trips (+naye), share links on, expenses (ginti + total), messages (unread), aaj ke AI plans.
+  - **7 / 30 / 90 din** filter. Charts: trips per day, new accounts per day, AI plans per day (AI on ho to), popular destinations
+    ("Goa" aur "goa " ek hi), plans kisne banaye (Gemini / offline / sample), cache (AI plans, places, routes, weather).
+    Hover pe detail, har time chart ka **Table** view, screen reader ke liye summary. Din IST mein gine jaate hain.
+  - **Contact messages inbox:** New / Read filter, Mark as read / unread, Reply (e-mail), Delete (confirm).
+  - **Accounts:** search (naam / e-mail), role, kitne trips, joined, last login.
+- **Privacy:** stats mein sirf ginti / totals — kisi ka plan, kharche ki details ya e-mail stats mein nahi.
+- Tests: server 3 (sirf admin, stats ke numbers, inbox + accounts), browser 5.
+
+**Depends on:** 4, 15 — **Affects:** 18
 
 ### Part 18 — Final
 - Swagger API docs (`/api/docs`), tests badhana (Vitest + React Testing Library), README rewrite, architecture + ER diagram (report ke liye), final deploy.

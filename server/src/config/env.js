@@ -56,6 +56,8 @@ const envSchema = z
     JWT_EXPIRES_DAYS: z.coerce.number().int().min(1).max(90).default(7),
     COOKIE_SAMESITE: z.enum(['lax', 'strict', 'none']).default('lax'),
     COOKIE_SECURE: z.enum(['auto', 'true', 'false']).default('auto'),
+    // Part 17: these e-mails get the admin dashboard when they log in (comma-separated). Empty = nobody by e-mail.
+    ADMIN_EMAILS: z.string().trim().default(''),
     DEMO_LOGIN_ENABLED: z
       .enum(['true', 'false'])
       .default('true')
@@ -147,6 +149,11 @@ export const config = Object.freeze({
     cookieSameSite: env.COOKIE_SAMESITE,
     cookieSecure: env.COOKIE_SECURE === 'auto' ? isProd : env.COOKIE_SECURE === 'true',
     demoLoginEnabled: env.DEMO_LOGIN_ENABLED,
+    adminEmails: Object.freeze(
+      env.ADMIN_EMAILS.split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean),
+    ),
   }),
   gemini: Object.freeze({
     apiKey: env.GEMINI_API_KEY,
