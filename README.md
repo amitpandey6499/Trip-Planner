@@ -48,6 +48,7 @@ automatically). Without a Gemini key the offline planner covers **Manali, Goa, J
 Rishikesh**; the app says so on the wizard, the itinerary and the Profile page. API documentation: **http://localhost:5000/api/docs**.
 
 ## Put it online (free)
+## abc
 
 One Render web service runs the built app **and** the API; data stays in MongoDB Atlas. `render.yaml` describes everything:
 
