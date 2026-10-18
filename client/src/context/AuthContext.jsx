@@ -14,18 +14,38 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true); // true until the first /auth/me answer
 
+  const loadUser = useCallback(async () => {
+    const res = await authApi.me();
+    setUser(res.data);
+    return res.data;
+  }, []);
+
   const refreshUser = useCallback(async () => {
     try {
-      const res = await authApi.me();
-      setUser(res.data);
-      return res.data;
+      return await loadUser();
     } catch {
       setUser(null);
       return null;
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [loadUser]);
+
+  const verifySignIn = useCallback(async () => {
+    try {
+      return await loadUser();
+    } catch (err) {
+      setUser(null);
+      if (err.response?.status === 401) {
+        throw new Error('Sign-in succeeded, but the session was not accepted. Check that the app and API use the same site and cookie settings.', {
+          cause: err,
+        });
+      }
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  }, [loadUser]);
 
   useEffect(() => {
     refreshUser();
@@ -45,23 +65,23 @@ export const AuthProvider = ({ children }) => {
   const login = useCallback(
     async ({ email, password, rememberMe = true }) => {
       await authApi.login({ email, password, rememberMe });
-      return refreshUser();
+      return verifySignIn();
     },
-    [refreshUser],
+    [verifySignIn],
   );
 
   const register = useCallback(
     async ({ name, email, password }) => {
       await authApi.register({ name, email, password });
-      return refreshUser();
+      return verifySignIn();
     },
-    [refreshUser],
+    [verifySignIn],
   );
 
   const loginDemo = useCallback(async () => {
     await authApi.loginDemo();
-    return refreshUser();
-  }, [refreshUser]);
+    return verifySignIn();
+  }, [verifySignIn]);
 
   const logout = useCallback(async () => {
     try {

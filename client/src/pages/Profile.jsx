@@ -1,87 +1,12 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Mail, GraduationCap, LogOut, CheckCircle2, AlertTriangle, XCircle, Loader2, CalendarDays, Map, Heart } from 'lucide-react';
-import { projectInfo, collegeLabel } from '@tripplanner/shared';
+import { Mail, LogOut, CalendarDays, Map, Heart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useSystemStatus } from '../hooks/useSystemStatus';
 import Avatar from '../components/Avatar';
-
-const badgeStyles = {
-  ok: 'bg-emerald-100 text-emerald-800',
-  warn: 'bg-amber-100 text-amber-800',
-  error: 'bg-red-100 text-red-700',
-};
-const badgeIcons = { ok: CheckCircle2, warn: AlertTriangle, error: XCircle };
-
-const StatusCard = ({ title, state, label, detail }) => {
-  const Icon = badgeIcons[state];
-  return (
-    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-bold text-slate-800">{title}</span>
-        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${badgeStyles[state]}`}>
-          <Icon className="w-3 h-3" />
-          {label}
-        </span>
-      </div>
-      <p className="text-slate-500 text-[11px]">{detail}</p>
-    </div>
-  );
-};
-
-/** Turns GET /api/health into status cards. Nothing here is hardcoded "green". */
-const buildStatusCards = (status, error, aiUsage) => {
-  if (error || !status) {
-    return [
-      { title: 'Backend API', state: 'error', label: 'Offline', detail: 'Server not reachable. Run "npm run dev" in the project folder.' },
-    ];
-  }
-  const { services = {}, database = {} } = status;
-  return [
-    { title: 'Backend API', state: 'ok', label: 'Online', detail: `${status.environment} • v${status.version} • up ${status.uptimeSeconds}s` },
-    {
-      title: 'Database',
-      state: database.connected ? 'ok' : 'error',
-      label: database.connected ? 'Connected' : 'Disconnected',
-      detail: database.connected ? `MongoDB database "${database.name}"` : 'MongoDB is not reachable. Check MONGODB_URI in server/.env.',
-    },
-    { title: 'Login', state: 'ok', label: 'JWT', detail: 'Session in an httpOnly cookie, passwords hashed with bcrypt.' },
-    {
-      title: 'Google Gemini AI',
-      state: services.geminiAI ? 'ok' : 'warn',
-      label: services.geminiAI ? 'Configured' : 'Not configured',
-      detail: services.geminiAI
-        ? `Model: ${services.aiModel}${aiUsage ? ` • ${aiUsage.left} of ${aiUsage.limit} AI plans left today` : ''}`
-        : `Add GEMINI_API_KEY in server/.env. Until then the offline planner is used (${(services.offlineDestinations ?? []).length} destinations).`,
-    },
-    {
-      title: 'Google Places',
-      state: services.googlePlaces ? 'ok' : 'warn',
-      label: services.googlePlaces ? 'Configured' : 'Optional',
-      detail: services.googlePlaces ? 'Live hotel search enabled.' : 'Using the curated hotel and restaurant list.',
-    },
-    {
-      title: 'Photos & weather',
-      state: services.photos && services.weather ? 'ok' : 'warn',
-      label: services.photos && services.weather ? 'Active' : 'Partly off',
-      detail: `Destination photos: ${services.photos ? 'Wikipedia' : 'off'} • Weather: ${services.weather ? 'Open-Meteo (forecast + typical)' : 'off'}.`,
-    },
-    {
-      title: 'Maps & routes',
-      state: services.map?.enabled ? 'ok' : 'warn',
-      label: services.map?.enabled ? 'Active' : 'Estimates only',
-      detail: services.map?.enabled
-        ? `Places: ${services.map.geocoder} • Road routes: ${services.map.router} • Leaflet + OpenStreetMap tiles.`
-        : 'MAP_ENABLED=false: distances are straight-line estimates.',
-    },
-  ];
-};
 
 export const Profile = () => {
   const navigate = useNavigate();
   const { user, logout, refreshUser } = useAuth();
-  const { status, error, loading } = useSystemStatus();
-  const cards = buildStatusCards(status, error, user?.ai);
 
   // Fresh trip count every time the profile opens.
   useEffect(() => {
@@ -93,7 +18,7 @@ export const Profile = () => {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="border-b border-slate-200/80 pb-4">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">Profile & Settings</h1>
-          <p className="text-xs sm:text-sm text-slate-500 mt-1">Your account and the live status of the system</p>
+          <p className="text-xs sm:text-sm text-slate-500 mt-1">Your account details and settings</p>
         </div>
 
         {/* User card */}
@@ -139,44 +64,32 @@ export const Profile = () => {
           </button>
         </div>
 
-        {/* College project details */}
-        <div className="bg-gradient-to-br from-blue-900 to-indigo-950 text-white rounded-3xl p-6 sm:p-8 shadow-xl border border-blue-800/40 space-y-4">
-          <div className="flex items-center gap-2">
-            <GraduationCap className="w-6 h-6 text-amber-300" />
-            <h3 className="text-lg font-bold">{projectInfo.projectType}</h3>
+        <section className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft">
+          <div className="max-w-2xl">
+            <h2 className="text-lg font-bold text-slate-900">Manage your travel profile</h2>
+            <p className="mt-2 text-sm leading-relaxed text-slate-600">
+              Your account details and travel activity are shown above. Open your saved trips to review or continue planning,
+              or browse your favorite destinations whenever you need inspiration.
+            </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 space-y-1">
-              <span className="text-slate-300 block text-[10px] uppercase font-bold">Institution</span>
-              <p className="font-bold text-sm text-white">{collegeLabel}</p>
-              <p className="text-slate-300">{projectInfo.college.university}</p>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-white/10 backdrop-blur-xs border border-white/10 space-y-1">
-              <span className="text-slate-300 block text-[10px] uppercase font-bold">Academic Session</span>
-              <p className="font-bold text-sm text-white">{projectInfo.academicSession}</p>
-              <p className="text-slate-300">{projectInfo.college.department}</p>
-            </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <Link
+              to="/my-trips"
+              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+            >
+              <Map className="h-4 w-4" />
+              View My Trips
+            </Link>
+            <Link
+              to="/explore?favorites=1"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50"
+            >
+              <Heart className="h-4 w-4 text-red-400" />
+              Browse Favorites
+            </Link>
           </div>
-        </div>
+        </section>
 
-        {/* Live system status */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft space-y-5">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <div>
-              <h3 className="text-base font-bold text-slate-900">System Integration Status</h3>
-              <p className="text-xs text-slate-500">Read live from the server (GET /api/health)</p>
-            </div>
-            {loading && <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />}
-          </div>
-
-          {!loading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-              {cards.map((card) => (
-                <StatusCard key={card.title} {...card} />
-              ))}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { MapPin, Send, CheckCircle2, GraduationCap, Users, AlertCircle, Loader2 } from 'lucide-react';
-import { ContactSchema, projectInfo, validate } from '@tripplanner/shared';
+import { Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { ContactSchema, validate } from '@tripplanner/shared';
 import { useAuth } from '../context/AuthContext';
 import { contactApi } from '../services/api';
 
@@ -58,49 +58,8 @@ export const Contact = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
-          
-          {/* Info Card */}
-          <div className="md:col-span-5 bg-slate-900 text-white rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
-            <h3 className="text-xl font-bold">Campus Address</h3>
-            
-            <div className="space-y-4 text-xs text-slate-300">
-              <div className="flex items-start gap-3">
-                <MapPin className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <p>
-                  {projectInfo.college.name}
-                  <br />
-                  {projectInfo.college.address}
-                </p>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <GraduationCap className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <p>
-                  {projectInfo.college.university}
-                  <br />
-                  Academic Session {projectInfo.academicSession}
-                </p>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <Users className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
-                <p>
-                  {projectInfo.team.map((member) => (
-                    <span key={member.rollNo || member.name} className="block">
-                      {member.name}
-                      {member.rollNo ? ` (${member.rollNo})` : ''}
-                    </span>
-                  ))}
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-800 text-[11px] text-slate-400">{projectInfo.college.department}</div>
-          </div>
-
-          {/* Form */}
-          <div className="md:col-span-7 bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft">
+        <div className="mx-auto max-w-2xl">
+          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft">
             {submitted ? (
               <div className="p-8 text-center space-y-3">
                 <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto" />
@@ -174,7 +133,6 @@ export const Contact = () => {
               </form>
             )}
           </div>
-
         </div>
 
       </div>

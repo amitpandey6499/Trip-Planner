@@ -30,7 +30,15 @@ export const errorHandler = (err, req, res, _next) => {
   const expected = err instanceof ApiError || status < 500;
 
   if (!expected) {
-    console.error(`[Error] ${req.method} ${req.originalUrl}`, err);
+    const routePath = typeof req.route?.path === 'string' ? req.route.path : '[unmatched route]';
+    const code = typeof err.code === 'number' || (typeof err.code === 'string' && /^[A-Z0-9_-]{1,32}$/i.test(err.code)) ? err.code : undefined;
+    console.error('[Error] Unexpected request failure', {
+      method: req.method,
+      route: `${req.baseUrl ?? ''}${routePath}`,
+      status,
+      error: typeof err.name === 'string' ? err.name : 'Error',
+      ...(code !== undefined && { code }),
+    });
     // Never leak internal details to users in production.
     if (config.isProd) message = 'Something went wrong on our side. Please try again.';
   } else if (config.isDev) {

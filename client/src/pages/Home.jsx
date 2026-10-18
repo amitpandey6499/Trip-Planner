@@ -8,7 +8,6 @@ import {
   Map,
   Gem
 } from 'lucide-react';
-import { projectInfo } from '@tripplanner/shared';
 import QuickSearchForm from '../components/QuickSearchForm';
 import DestinationCard from '../components/DestinationCard';
 import { destinationApi } from '../services/api';
@@ -261,13 +260,10 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* 6. BOTTOM COLLEGE BANNER CTA */}
+      {/* 6. BOTTOM BANNER CTA */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="rounded-3xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-800 text-white p-8 sm:p-12 shadow-xl shadow-blue-600/20 flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center md:text-left">
-            <span className="text-xs font-semibold uppercase tracking-wider bg-white/20 px-3 py-1 rounded-full">
-              {projectInfo.college.shortName} • Academic Session {projectInfo.academicSession}
-            </span>
             <h2 className="text-2xl sm:text-3xl font-extrabold">
               Ready to create your personalized trip?
             </h2>

@@ -1,6 +1,6 @@
 # TripPlanner — AI-Powered Smart Trip Planner
 
-> **B.Tech Mini Project** · ABES Engineering College, Ghaziabad (AKTU) · Department of Computer Science & Engineering · Session 2026–27 · **v2.0.0**
+> **BCA Mini Project** · ABES IT, Ghaziabad (AKTU) · BACHLOR OF COMPUTER APPLICATION · Session 2026–27 · **v2.0.0**
 
 TripPlanner turns travel preferences — destination, dates, budget in ₹, travellers, interests, pace, stay type, food
 preference — into a day-wise itinerary with timings, costs and tips, shows every day on a map with real road routes, and

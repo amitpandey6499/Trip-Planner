@@ -5,7 +5,6 @@ import { TripProvider } from './context/TripContext';
 
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import DemoModeBanner from './components/DemoModeBanner';
 import Toast from './components/Toast';
 import GenerationOverlay from './components/GenerationOverlay';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -50,7 +49,6 @@ export const App = () => {
       <AuthProvider>
         <TripProvider>
           <div className="flex flex-col min-h-screen">
-            <DemoModeBanner />
             <Navbar />
             <main className="flex-1">
               <ErrorBoundaryForRoute>

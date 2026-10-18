@@ -1,120 +1,89 @@
-import { GraduationCap, Compass, Layers, Users } from 'lucide-react';
-import { projectInfo, collegeLabel } from '@tripplanner/shared';
+import { CalendarDays, CloudSun, Compass, Map, Plane, Share2, Sparkles, Wallet } from 'lucide-react';
+import { projectInfo } from '@tripplanner/shared';
 
-// Keep this list in sync with what the code really uses (updated in every roadmap part).
-const architecture = [
+const features = [
   {
-    title: 'Frontend Layer',
-    items: ['React 18 with Vite', 'Tailwind CSS design system', 'React Router for navigation', 'Leaflet + OpenStreetMap interactive maps', 'Lucide icons'],
+    title: 'Personalized itineraries',
+    description: 'Build a day-by-day plan around your destination, travel dates, budget, interests and pace.',
+    Icon: CalendarDays,
   },
   {
-    title: 'Backend API Layer',
-    items: [
-      'Node.js + Express 5 REST API',
-      'JWT login in an httpOnly cookie, bcrypt password hashing',
-      'Google Gemini AI (offline sample mode without a key)',
-      'Shared Zod schemas: same validation in browser and server',
-      'Helmet security headers and rate limiting',
-    ],
+    title: 'Routes at a glance',
+    description: 'See daily stops and travel routes on a map, with distances and estimated travel times.',
+    Icon: Map,
   },
   {
-    title: 'Data Layer',
-    items: ['MongoDB Atlas (cloud database) with Mongoose models', 'Users, trips (with itinerary) and contact messages', 'Every trip query is limited to its owner', 'Itineraries validated and normalized before saving'],
+    title: 'Plans you can make your own',
+    description: 'Reorder, add or update activities and keep your itinerary and estimated costs in sync.',
+    Icon: Compass,
   },
   {
-    title: 'Location Data',
-    items: ['Curated data for popular Indian destinations', 'Google Places API (optional)', 'Day-wise waypoints on the map'],
+    title: 'Trip costs made clearer',
+    description: 'Review estimated costs, split shared expenses, see balances and find a simple way to settle up.',
+    Icon: Wallet,
+  },
+  {
+    title: 'AI-assisted planning',
+    description: 'Generate a trip plan from your preferences, with an offline planner available for supported destinations.',
+    Icon: Sparkles,
+  },
+  {
+    title: 'Useful travel details',
+    description: 'Check destination information, weather, packing suggestions and ways to reach your destination.',
+    Icon: CloudSun,
+  },
+  {
+    title: 'Share and take your plan with you',
+    description: 'Share a read-only trip link or export your itinerary as a PDF or calendar event.',
+    Icon: Share2,
+  },
+  {
+    title: 'A plan that adapts as you travel',
+    description: 'Save trips, make a copy of a shared plan and update your schedule when your plans change.',
+    Icon: Plane,
   },
 ];
 
 export const About = () => {
-  const { team, guide, college } = projectInfo;
-
   return (
     <div className="min-h-screen py-10 sm:py-16 px-4 sm:px-6 lg:px-8 bg-slate-50">
       <div className="max-w-4xl mx-auto space-y-10">
-        {/* Title */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">
-            <GraduationCap className="w-4 h-4 text-blue-600" />
-            <span>
-              {college.shortName} {college.city} • {projectInfo.projectType} {projectInfo.academicSession}
-            </span>
-          </div>
           <h1 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">About {projectInfo.name}</h1>
           <p className="text-sm text-slate-500 max-w-xl mx-auto">
-            A full-stack travel planning platform that generates personalized, budget-aware day-wise itineraries with interactive maps.
+            {projectInfo.tagline}. Bring your itinerary, routes, travel details and shared expenses together so you can spend less time
+            coordinating and more time looking forward to the journey.
           </p>
         </div>
 
-        {/* Problem statement */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft space-y-4">
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
             <Compass className="w-5 h-5 text-blue-600" />
-            Project Motivation & Problem Statement
+            Plan your trip in one place
           </h2>
           <p className="text-sm text-slate-600 leading-relaxed">
-            Planning a multi-day trip is often fragmented across travel blogs, map apps, budget spreadsheets and hotel listings. Most automated
-            trip planners give generic lists without day-wise logistics or budget limits.
-          </p>
-          <p className="text-sm text-slate-600 leading-relaxed">
-            <strong>{projectInfo.name}</strong> uses Generative AI to turn travel preferences (dates, budget in ₹, number of travelers, diet and
-            interests) into a day-by-day schedule with estimated costs, stays, restaurants and a map.
+            {projectInfo.name} brings your travel preferences, daily activities, routes and budget estimates together in a single itinerary.
+            Choose a destination, dates, budget, interests and travel pace to get a day-by-day starting plan. Use AI-assisted generation or
+            the offline planner for supported destinations, then adjust the schedule to fit your trip.
           </p>
         </div>
 
-        {/* Architecture */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft space-y-6">
           <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Layers className="w-5 h-5 text-indigo-600" />
-            System Architecture & Technology Stack
+            <Map className="w-5 h-5 text-indigo-600" />
+            Plan, organize and share
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-            {architecture.map((block) => (
-              <div key={block.title} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
-                <span className="font-bold text-slate-900 text-sm block">{block.title}</span>
-                <ul className="space-y-1 text-slate-600 list-disc list-inside">
-                  {block.items.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {features.map(({ title, description, Icon }) => (
+              <div key={title} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 space-y-2">
+                <h3 className="font-bold text-slate-900 flex items-center gap-2">
+                  <Icon className="w-4 h-4 text-blue-600" />
+                  {title}
+                </h3>
+                <p className="text-sm text-slate-600 leading-relaxed">{description}</p>
               </div>
             ))}
           </div>
-        </div>
-
-        {/* Team */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-100 shadow-soft space-y-4">
-          <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Users className="w-5 h-5 text-teal-600" />
-            Project Team
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-            {team.map((member) => (
-              <div key={member.rollNo || member.name} className="p-4 rounded-2xl bg-slate-50 border border-slate-200/70">
-                <p className="font-bold text-slate-900">{member.name}</p>
-                <p className="text-xs text-slate-500">
-                  {member.role}
-                  {member.rollNo ? ` • Roll No. ${member.rollNo}` : ''}
-                </p>
-              </div>
-            ))}
-          </div>
-          {guide.name && (
-            <p className="text-xs text-slate-600">
-              Project Guide: <span className="font-semibold text-slate-800">{guide.name}</span>
-              {guide.designation ? `, ${guide.designation}` : ''}
-            </p>
-          )}
-        </div>
-
-        {/* Academic note */}
-        <div className="bg-blue-50 border border-blue-200 rounded-3xl p-6 text-center text-xs text-blue-900 space-y-2">
-          <GraduationCap className="w-8 h-8 text-blue-600 mx-auto" />
-          <h4 className="font-bold text-sm">Academic Project</h4>
-          <p className="max-w-md mx-auto text-blue-800">
-            Developed at {college.department}, {collegeLabel} ({college.university}) for Academic Session {projectInfo.academicSession}.
-          </p>
         </div>
       </div>
     </div>
